@@ -28,7 +28,7 @@ impl AppState {
 
         // OPTION A: Increase threshold to 10 seconds (change Duration as needed)
         connect_options =
-            connect_options.log_slow_statements(LevelFilter::Warn, Duration::from_secs(10));
+            connect_options.log_slow_statements(LevelFilter::Warn, Duration::from_secs(30));
         let pool = MySqlPoolOptions::new()
             .max_connections(3)
             .acquire_timeout(Duration::from_secs(5))
