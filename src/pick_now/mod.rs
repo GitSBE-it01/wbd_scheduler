@@ -1,15 +1,14 @@
-use crate::{app_error::AppError, app_state::AppState};
-use sqlx::Row;
+use crate::{app_error::AppResult, app_state::AppState};
+use std::time::Instant;
 use tracing::info;
+mod demand;
+pub mod model;
 
-pub async fn run(state: &AppState) -> Result<(), AppError> {
-    let pool = state.pool();
-    let mut tx = pool.begin().await?;
-    let data = sqlx::query("SELECT * FROM db_wbd.wbd_test WHERE id = 1")
-        .fetch_one(&mut *tx)
-        .await?;
-    tx.commit().await?;
-    let sum: i64 = data.get("id");
-    info!("id= {}", sum);
+pub async fn run(state: &AppState) -> AppResult<()> {
+    info!("Running Pick Now Service...");
+    let total_start = Instant::now();
+    let dmd = demand::run(state).await?;
+    let total_dur = total_start.elapsed();
+    info!("Pick Now Total duration: {:?}", total_dur);
     Ok(())
 }

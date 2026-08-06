@@ -4,18 +4,28 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+csv = "1.4.0"
+# -- Environment and Configuration
 dotenvy = "0.15.7"
 envy = "0.4.2"
+rust_xlsxwriter = { version = "0.97.1", features = ["jiff", "serde"] }
+# -- Serde
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
+# -- database
 sqlx = { version = "0.9.0", features = [
     "mysql",
     "runtime-tokio",
+    "time",
     "tls-native-tls",
 ] }
+# -- error handling
 thiserror = "2.0.19"
-time = { version = "0.3.55", features = ["serde"] }
+# -- formating
+time = { version = "0.3.55", features = ["serde", "formatting", "macros"] }
+# -- async runtime 
 tokio = { version = "1.53.1", features = ["full", "tracing"] }
+# -- logging
 tracing = "0.1.44"
 tracing-appender = "0.2.5"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "std"] }

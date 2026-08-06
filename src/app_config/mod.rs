@@ -1,4 +1,4 @@
-use crate::app_error::AppError;
+use crate::app_error::AppResult;
 use dotenvy::{dotenv, from_path};
 use serde::Deserialize;
 use std::path::Path;
@@ -10,7 +10,7 @@ pub struct AppConfig {
     pub db_url_new: String,
 }
 impl AppConfig {
-    pub fn new(path: &str) -> Result<Self, AppError> {
+    pub fn new(path: &str) -> AppResult<Self> {
         let path = Path::new(path);
         let config = if path.exists() {
             from_path(path)?;
@@ -19,18 +19,7 @@ impl AppConfig {
             let _ = dotenv();
             envy::from_env::<AppConfig>()?
         };
-        info!("AppConfig initialized: {:?}", config);
+        info!("AppConfig initialized");
         Ok(config)
     }
-
-    // pub fn from_env() -> Result<Self, AppError> {
-    //     let _ = dotenv();
-    //     let config = envy::from_env::<AppConfig>()?;
-    //     Ok(config)
-    // }
-    // pub fn from_env_file(path: &Path) -> Result<Self, AppError> {
-    //     from_path(path)?;
-    //     let config = envy::from_env::<AppConfig>()?;
-    //     Ok(config)
-    // }
 }

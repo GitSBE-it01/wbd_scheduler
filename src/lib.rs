@@ -1,7 +1,6 @@
 // general modules
 pub mod app_config;
 pub mod app_error;
-pub mod app_services;
 pub mod app_state;
 pub mod app_utilities;
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
