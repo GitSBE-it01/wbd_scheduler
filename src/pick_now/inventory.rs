@@ -12,7 +12,7 @@ use tracing::info;
 
 pub async fn run(state: &AppState) -> AppResult<Vec<Inv>> {
     let pool = state.pool();
-    let ttl = Duration::hours(24);
+    let ttl = Duration::hours(12);
     let query_start = Instant::now();
     let file_path = Path::new("./cache/");
     let filename = "inventory.json";

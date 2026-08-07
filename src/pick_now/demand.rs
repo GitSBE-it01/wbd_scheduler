@@ -12,7 +12,7 @@ use tracing::info;
 
 pub async fn run(state: &AppState) -> AppResult<Vec<Demand>> {
     let pool = state.pool();
-    let ttl = Duration::hours(24);
+    let ttl = Duration::hours(12);
     let query_start = Instant::now();
     let file_path = Path::new("./cache/");
     let filename = "demand.json";
@@ -31,6 +31,7 @@ pub async fn run(state: &AppState) -> AppResult<Vec<Demand>> {
                 dm_b.wo__chr04 AS loc_line,
                 dm_c.dept AS dept,
                 (dm_a.wod_qty_req - dm_a.wod_qty_iss) AS qty,
+                dm_b.wo_rel_datex AS _date,
                 dm_b.wo_rel_datex AS rel_dt,
                 dm_b.wo_due_datex AS due_dt,
                 dm_b.wo_rmks AS wo_rmks,
