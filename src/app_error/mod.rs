@@ -34,6 +34,8 @@ pub enum AppError {
     NotFound(String),
     #[error("Command execution failed: {0}")]
     ExecutionFailed(String),
+    #[error("Cache data not available or invalid at path: {0:?}")]
+    CacheMiss(PathBuf),
     #[error("Failed to create directory '{path}': {source}")]
     CreateDir {
         path: PathBuf,

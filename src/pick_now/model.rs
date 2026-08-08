@@ -1,3 +1,4 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use time::Date;
@@ -10,12 +11,18 @@ pub struct CekID {
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct PIC {
+    pub tipe: String,
+    pub pic: String,
+}
+
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
 pub struct Demand {
     pub item: String,
     pub lot_id: String,
     pub loc_line: String,
     pub dept: String,
-    pub qty: f64,
+    pub qty: Decimal,
     #[serde(with = "date_format::option")]
     pub _date: Option<Date>,
     #[serde(with = "date_format::option")]
@@ -31,7 +38,7 @@ pub struct Demand {
 pub struct Inv {
     pub item: String,
     pub dept: String,
-    pub qty_oh: f64,
+    pub qty_oh: Decimal,
     #[serde(with = "date_format::option")]
     pub _date: Option<Date>,
     pub lot_oh: String,
@@ -68,19 +75,19 @@ impl Record {
             Record::Inventory(i) => i._date,
         }
     }
-    pub fn qty(&self) -> f64 {
+    pub fn qty(&self) -> Decimal {
         match self {
             Record::Demand(d) => d.qty,
-            Record::Inventory(_) => 0.00,
+            Record::Inventory(_) => Decimal::ZERO,
         }
     }
-    pub fn qty_oh(&self) -> f64 {
+    pub fn qty_oh(&self) -> Decimal {
         match self {
-            Record::Demand(_) => 0.00,
+            Record::Demand(_) => Decimal::ZERO,
             Record::Inventory(i) => i.qty_oh,
         }
     }
-    pub fn new(self, qty_val: f64, pck: String, inew: String) -> Combine {
+    pub fn new(self, qty_val: Decimal, pck: String, inew: String, pic: Option<String>) -> Combine {
         match self {
             Record::Demand(d) => Combine {
                 item: d.item,
@@ -88,7 +95,7 @@ impl Record {
                 loc_line: Some(d.loc_line),
                 dept: d.dept,
                 qty: d.qty,
-                qty_oh: 0.00,
+                qty_oh: Decimal::ZERO,
                 _date: d.rel_dt,
                 rel_dt: d.rel_dt,
                 due_dt: d.due_dt,
@@ -98,6 +105,7 @@ impl Record {
                 item_id: Some(d.item_id),
                 old_id: Some(d.old_id),
                 lot_oh: None,
+                pic: pic,
                 remark: "2.demand".to_string(),
                 val_acc: qty_val,
             },
@@ -106,7 +114,7 @@ impl Record {
                 lot_id: None,
                 loc_line: None,
                 dept: i.dept,
-                qty: 0.00,
+                qty: Decimal::ZERO,
                 qty_oh: i.qty_oh,
                 _date: i._date,
                 rel_dt: i._date,
@@ -117,6 +125,7 @@ impl Record {
                 item_id: None,
                 old_id: None,
                 lot_oh: Some(i.lot_oh),
+                pic: pic,
                 remark: "1.on hand".to_string(),
                 val_acc: qty_val,
             },
@@ -124,26 +133,27 @@ impl Record {
     }
 }
 
-#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq)]
 pub struct Combine {
     pub item: String,
+    pub remark: String,
     pub lot_id: Option<String>,
     pub loc_line: Option<String>,
     pub dept: String,
-    pub remark: String,
-    pub qty: f64,
-    pub val_acc: f64,
-    pub qty_oh: f64,
+    pub qty: Decimal,
+    pub val_acc: Decimal,
+    pub qty_oh: Decimal,
+    pub lot_oh: Option<String>,
     #[serde(with = "date_format::option")]
     pub _date: Option<Date>,
     #[serde(with = "date_format::option")]
     pub rel_dt: Option<Date>,
     #[serde(with = "date_format::option")]
     pub due_dt: Option<Date>,
+    pub wo_rmks: Option<String>,
+    pub pic: Option<String>,
     pub pick: String,
     pub id_new: String,
-    pub wo_rmks: Option<String>,
     pub item_id: Option<String>,
     pub old_id: Option<String>,
-    pub lot_oh: Option<String>,
 }

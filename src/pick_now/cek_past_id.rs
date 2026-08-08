@@ -6,18 +6,16 @@ use crate::{
 };
 use std::path::Path;
 use std::time::Instant;
-use time::Duration;
 use tokio::fs;
 use tracing::info;
 
 pub async fn run(state: &AppState) -> AppResult<Vec<CekID>> {
     let pool = state.pool();
-    let ttl = Duration::hours(12);
     let query_start = Instant::now();
     let file_path = Path::new("./cache/");
-    let filename = "inventory.json";
+    let filename = "past_rslt.json";
     let fullpath = file_path.join(filename);
-    let datas: Vec<CekID> = if is_cache_valid(&fullpath, ttl).await? {
+    let datas: Vec<CekID> = if is_cache_valid(&fullpath, None).await? {
         info!("Cache hit! Reading data from {:?}", fullpath);
         let json_content = fs::read_to_string(&fullpath).await?;
         serde_json::from_str(&json_content)?
@@ -29,8 +27,9 @@ pub async fn run(state: &AppState) -> AppResult<Vec<CekID>> {
                     DISTINCT (lot__id) as 'wo_id', 
                     id_new as 'id_new'
                     FROM dbpick_now.result_fix
-                    WHERE data_date = CURDATE( ) - INTERVAL 1
-                    DAY
+                    WHERE data_date = CURDATE( ) - INTERVAL 1 DAY 
+                    AND lot__id IS NOT NULL 
+                    AND TRIM(lot__id) <> ''
                     GROUP BY lot__id
             "#,
         )

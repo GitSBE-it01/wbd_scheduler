@@ -6,18 +6,16 @@ use crate::{
 };
 use std::path::Path;
 use std::time::Instant;
-use time::Duration;
 use tokio::fs;
 use tracing::info;
 
 pub async fn run(state: &AppState) -> AppResult<Vec<Demand>> {
     let pool = state.pool();
-    let ttl = Duration::hours(12);
     let query_start = Instant::now();
     let file_path = Path::new("./cache/");
     let filename = "demand.json";
     let fullpath = file_path.join(filename);
-    let datas: Vec<Demand> = if is_cache_valid(&fullpath, ttl).await? {
+    let datas: Vec<Demand> = if is_cache_valid(&fullpath, None).await? {
         info!("Cache hit! Reading data from {:?}", fullpath);
         let json_content = fs::read_to_string(&fullpath).await?;
         serde_json::from_str(&json_content)?
