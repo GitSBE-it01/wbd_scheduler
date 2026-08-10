@@ -1,7 +1,10 @@
 use crate::app_error::{AppError, AppResult};
 use rust_xlsxwriter::Workbook;
 use serde::Serialize;
+use serde_json::json;
 use std::path::Path;
+use time::OffsetDateTime;
+use time::macros::format_description;
 use tokio::fs;
 
 pub async fn save_as_json<T, P>(data: &T, dir_path: P, file_name: &str) -> AppResult<()>
@@ -12,7 +15,13 @@ where
     let dir = dir_path.as_ref();
     fs::create_dir_all(dir).await?;
     let file_path = dir.join(file_name);
-    let json_data = serde_json::to_string_pretty(data)?;
+    let format = format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]");
+    let created_at = OffsetDateTime::now_utc().format(&format)?;
+    let payload = json!({
+        "created_at": created_at,
+        "data": data
+    });
+    let json_data = serde_json::to_string_pretty(&payload)?;
     fs::write(&file_path, json_data).await?;
     tracing::info!("Successfully exported JSON to {:?}", file_path);
     Ok(())

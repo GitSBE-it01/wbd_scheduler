@@ -26,6 +26,8 @@ pub enum AppError {
     Serialize(#[from] serde_json::Error),
     #[error("CSV error: {0}")]
     Csv(#[from] csv::Error),
+    #[error("Time formatting error: {0}")]
+    TimeFormat(#[from] time::error::Format),
     #[error("Excel error: {0}")]
     Xlsx(#[from] rust_xlsxwriter::XlsxError),
 

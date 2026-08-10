@@ -22,7 +22,7 @@ pub struct Demand {
     pub lot_id: String,
     pub loc_line: String,
     pub dept: String,
-    pub qty: Decimal,
+    pub qty: f64,
     #[serde(with = "date_format::option")]
     pub _date: Option<Date>,
     #[serde(with = "date_format::option")]
@@ -38,7 +38,7 @@ pub struct Demand {
 pub struct Inv {
     pub item: String,
     pub dept: String,
-    pub qty_oh: Decimal,
+    pub qty_oh: f64,
     #[serde(with = "date_format::option")]
     pub _date: Option<Date>,
     pub lot_oh: String,
@@ -77,24 +77,38 @@ impl Record {
     }
     pub fn qty(&self) -> Decimal {
         match self {
-            Record::Demand(d) => d.qty,
+            Record::Demand(d) => Decimal::from_f64_retain(d.qty).unwrap_or(Decimal::ZERO),
             Record::Inventory(_) => Decimal::ZERO,
+        }
+    }
+    pub fn item_id(&self) -> Option<&str> {
+        match self {
+            Record::Demand(d) => Some(&d.item_id),
+            Record::Inventory(_) => None,
         }
     }
     pub fn qty_oh(&self) -> Decimal {
         match self {
             Record::Demand(_) => Decimal::ZERO,
-            Record::Inventory(i) => i.qty_oh,
+            Record::Inventory(i) => Decimal::from_f64_retain(i.qty_oh).unwrap_or(Decimal::ZERO),
         }
     }
-    pub fn new(self, qty_val: Decimal, pck: String, inew: String, pic: Option<String>) -> Combine {
+    pub fn new(
+        self,
+        qty_val: Decimal,
+        pck: String,
+        inew: String,
+        pic: Option<String>,
+        desc1: Option<String>,
+        desc2: Option<String>,
+    ) -> Combine {
         match self {
             Record::Demand(d) => Combine {
                 item: d.item,
                 lot_id: Some(d.lot_id),
                 loc_line: Some(d.loc_line),
                 dept: d.dept,
-                qty: d.qty,
+                qty: Decimal::from_f64_retain(d.qty).unwrap_or(Decimal::ZERO),
                 qty_oh: Decimal::ZERO,
                 _date: d.rel_dt,
                 rel_dt: d.rel_dt,
@@ -108,6 +122,8 @@ impl Record {
                 pic: pic,
                 remark: "2.demand".to_string(),
                 val_acc: qty_val,
+                desc1: desc1,
+                desc2: desc2,
             },
             Record::Inventory(i) => Combine {
                 item: i.item,
@@ -115,7 +131,7 @@ impl Record {
                 loc_line: None,
                 dept: i.dept,
                 qty: Decimal::ZERO,
-                qty_oh: i.qty_oh,
+                qty_oh: Decimal::from_f64_retain(i.qty_oh).unwrap_or(Decimal::ZERO),
                 _date: i._date,
                 rel_dt: i._date,
                 due_dt: None,
@@ -128,6 +144,8 @@ impl Record {
                 pic: pic,
                 remark: "1.on hand".to_string(),
                 val_acc: qty_val,
+                desc1: desc1,
+                desc2: desc2,
             },
         }
     }
@@ -136,6 +154,7 @@ impl Record {
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq)]
 pub struct Combine {
     pub item: String,
+    pub desc1: Option<String>,
     pub remark: String,
     pub lot_id: Option<String>,
     pub loc_line: Option<String>,
@@ -155,5 +174,6 @@ pub struct Combine {
     pub pick: String,
     pub id_new: String,
     pub item_id: Option<String>,
+    pub desc2: Option<String>,
     pub old_id: Option<String>,
 }

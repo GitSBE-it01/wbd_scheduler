@@ -19,3 +19,4 @@ pub fn init_tracing() {
 
 // specialized services
 pub mod pick_now;
+pub mod qad_gen;

@@ -15,7 +15,7 @@ Note:
 
 ## Perintah di command line :
 
-Develop testing env :
+Develop env :
 command ini akan berulang jika ada perubahan di folder dir
 `cargo watch -q -x "run"`
 
@@ -26,5 +26,9 @@ seperti develop testing tetapi melihat folder examples saja. digunakan utk belaj
 Build .exe files (applikasi):
 utk membuat execute file
 `cargo build`
+
+running testing:
+utk running di directory tests utk running testing yg di buat di situ
+`cargo test --test nama_file`
 
 ##
