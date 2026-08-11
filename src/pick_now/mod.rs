@@ -10,7 +10,7 @@ pub mod pic;
 mod process;
 
 pub async fn run(state: &AppState) -> AppResult<()> {
-    info!("Running Pick Now Scheduler...");
+    info!("==========Pick Now==========");
     let total_start = Instant::now();
     let has_data: bool = sqlx::query_as::<_, Combine>(
         r#"
@@ -47,6 +47,9 @@ pub async fn run(state: &AppState) -> AppResult<()> {
     };
     process::caching::run(state).await?;
     let total_dur = total_start.elapsed();
-    info!("Process Pick Now Scheduler END within {:?}", total_dur);
+    info!(
+        duration = ?total_dur,
+        "====================END Pick Now===================="
+    );
     Ok(())
 }

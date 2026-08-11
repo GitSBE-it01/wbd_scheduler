@@ -1,6 +1,5 @@
 use crate::pick_now::model::Inv;
 use crate::{app_error::AppResult, app_state::AppState};
-use tracing::info;
 
 pub async fn run(state: &AppState) -> AppResult<Vec<Inv>> {
     let pool = state.pool();
@@ -34,7 +33,6 @@ pub async fn run(state: &AppState) -> AppResult<Vec<Inv>> {
         .fetch_all(pool)
         .await?;
 
-    info!("Inventory data {:?} fetched", datas.len());
     Ok(datas)
 }
 

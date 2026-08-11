@@ -1,6 +1,5 @@
 use crate::pick_now::model::CekID;
 use crate::{app_error::AppResult, app_state::AppState};
-use tracing::info;
 
 pub async fn run(state: &AppState) -> AppResult<Vec<CekID>> {
     let pool = state.pool();
@@ -18,7 +17,6 @@ pub async fn run(state: &AppState) -> AppResult<Vec<CekID>> {
     )
     .fetch_all(pool)
     .await?;
-    info!("ID from Past data {:?} fetched", datas.len());
     Ok(datas)
 }
 

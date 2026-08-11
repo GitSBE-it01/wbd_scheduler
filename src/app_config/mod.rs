@@ -19,7 +19,7 @@ impl AppConfig {
             let _ = dotenv();
             envy::from_env::<AppConfig>()?
         };
-        info!("AppConfig initialized");
+        info!("App Config initialized");
         Ok(config)
     }
 }

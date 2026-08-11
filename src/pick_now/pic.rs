@@ -1,6 +1,5 @@
 use crate::pick_now::model::PIC;
 use crate::{app_error::AppResult, app_state::AppState};
-use tracing::info;
 
 pub async fn run(state: &AppState) -> AppResult<Vec<PIC>> {
     let pool = state.pool();
@@ -15,7 +14,6 @@ pub async fn run(state: &AppState) -> AppResult<Vec<PIC>> {
     )
     .fetch_all(pool)
     .await?;
-    info!("PIC data {:?} fetched", datas.len());
     Ok(datas)
 }
 

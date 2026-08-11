@@ -8,6 +8,7 @@ use sqlx::{
 use std::time::Duration;
 use tracing::log::LevelFilter;
 use tracing::{error, info};
+pub mod telemetry;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -16,10 +17,9 @@ pub struct AppState {
 }
 impl AppState {
     pub async fn new(config: AppConfig) -> AppResult<Self> {
-        info!("Initializing database connection pool...");
         let pool = Self::build_pool(&config).await?;
         Self::test_connection(&pool).await?;
-        info!("Database connection pool ready");
+        info!("App State initialized");
         Ok(Self { pool, config })
     }
 

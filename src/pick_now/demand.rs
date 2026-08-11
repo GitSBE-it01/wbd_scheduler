@@ -1,6 +1,5 @@
 use crate::pick_now::model::Demand;
 use crate::{app_error::AppResult, app_state::AppState};
-use tracing::info;
 
 pub async fn run(state: &AppState) -> AppResult<Vec<Demand>> {
     let pool = state.pool();
@@ -29,7 +28,6 @@ pub async fn run(state: &AppState) -> AppResult<Vec<Demand>> {
     )
     .fetch_all(pool)
     .await?;
-    info!("Demand (WO) data {:?} fetched", datas.len());
     Ok(datas)
 }
 

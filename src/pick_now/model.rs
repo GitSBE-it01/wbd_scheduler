@@ -177,3 +177,30 @@ pub struct Combine {
     pub desc2: Option<String>,
     pub old_id: Option<String>,
 }
+
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq)]
+pub struct CachePickNow {
+    pub item: String,
+    pub _desc: Option<String>,
+    pub remark: String,
+    pub lot__id: Option<String>,
+    pub loc__line: Option<String>,
+    pub dept: String,
+    pub qty: Decimal,
+    pub valAcc: Decimal,
+    pub qty_OH: Decimal,
+    pub lotOH: Option<String>,
+    #[serde(with = "date_format::option")]
+    pub _date: Option<Date>,
+    #[serde(with = "date_format::option")]
+    pub rel_dt: Option<Date>,
+    #[serde(with = "date_format::option")]
+    pub due_dt: Option<Date>,
+    pub wo_rmks: Option<String>,
+    pub pic: Option<String>,
+    pub pick: String,
+    pub id_new: String,
+    pub item_id: Option<String>,
+    pub _desc2: Option<String>,
+    pub old_id: Option<String>,
+}

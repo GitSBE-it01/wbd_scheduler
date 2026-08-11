@@ -6,6 +6,7 @@ use std::path::Path;
 use time::OffsetDateTime;
 use time::macros::format_description;
 use tokio::fs;
+use tracing::info;
 
 pub async fn save_as_json<T, P>(data: &T, dir_path: P, file_name: &str) -> AppResult<()>
 where
@@ -18,12 +19,21 @@ where
     let format = format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]");
     let created_at = OffsetDateTime::now_utc().format(&format)?;
     let payload = json!({
-        "created_at": created_at,
+        "expires_at": created_at,
         "data": data
     });
+    let item_count = payload["data"].as_array().map(|arr| arr.len());
     let json_data = serde_json::to_string_pretty(&payload)?;
     fs::write(&file_path, json_data).await?;
-    tracing::info!("Successfully exported JSON to {:?}", file_path);
+    if let Some(count) = item_count {
+        info!(
+            count = count,
+            path = ?file_path,
+            "-->> Caching Done"
+        );
+    } else {
+        info!(path = ?file_path, "-->> Caching Done");
+    }
     Ok(())
 }
 
@@ -46,7 +56,7 @@ where
             path: file_path.clone(),
             source: err,
         })?;
-    tracing::info!("Successfully exported CSV to {:?}", file_path);
+    info!("Successfully exported CSV to {:?}", file_path);
     Ok(())
 }
 
@@ -73,6 +83,6 @@ where
             path: file_path.clone(),
             source: err,
         })?;
-    tracing::info!("Successfully exported XLSX to {:?}", file_path);
+    info!("Successfully exported XLSX to {:?}", file_path);
     Ok(())
 }

@@ -1,15 +1,11 @@
 use crate::{
     app_error::AppResult,
     app_state::AppState,
-    app_utilities::{save_file::save_as_json, validation::is_cache_valid},
+    app_utilities::{read_cache::read_data, save_file::save_as_json, validation::is_cache_valid},
 };
-//  use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::path::Path;
-use std::time::Instant;
-use tokio::fs;
-use tracing::info;
 time::serde::format_description!(date_format, Date, "[year]-[month]-[day]");
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -69,16 +65,13 @@ pub struct PtMstr {
 
 pub async fn run(state: &AppState) -> AppResult<Vec<PtMstr>> {
     let pool = state.pool();
-    let query_start = Instant::now();
     let file_path = Path::new("./cache/");
     let filename = "pt_mstr.json";
     let fullpath = file_path.join(filename);
     let datas = if is_cache_valid(&fullpath, None).await? {
-        info!("Cache hit! Reading data from {:?}", fullpath);
-        let json_content = fs::read_to_string(&fullpath).await?;
-        serde_json::from_str(&json_content)?
+        let db_datas: Vec<PtMstr> = read_data(&fullpath).await?;
+        db_datas
     } else {
-        info!("Cache missed or expired. Querying database...");
         let db_datas: Vec<PtMstr> = sqlx::query_as::<_, PtMstr>(
             r#"
             SELECT  
@@ -141,7 +134,5 @@ pub async fn run(state: &AppState) -> AppResult<Vec<PtMstr>> {
         save_as_json(&db_datas, file_path, filename).await?;
         db_datas
     };
-    let query_duration = query_start.elapsed();
-    info!("Fetch Demand data running duration: {:?}", query_duration);
     Ok(datas)
 }

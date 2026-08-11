@@ -28,6 +28,7 @@ async fn ck_pick_now() -> AppResult<()> {
         let db_datas: Vec<Combine> = sqlx::query_as::<_, Combine>(
             r#"
             SELECT item, 
+            _desc as 'desc1',
             remark, 
             lot__id as 'lot_id', 
             loc__line as 'loc_line', 
@@ -44,6 +45,7 @@ async fn ck_pick_now() -> AppResult<()> {
             pick, 
             id_new, 
             item_id, 
+            _desc2 AS desc2,
             old_id 
             FROM dbpick_now.result_fix WHERE data_date=CURDATE()
             "#,

@@ -9,7 +9,7 @@ use time::{OffsetDateTime, Weekday};
 use tracing::info;
 
 pub async fn run(state: &AppState) -> AppResult<()> {
-    info!("Fetching data for process...");
+    info!("-->> Fetching data for process");
     let (past_result, pic, dmd, inv, pt_mstr) = tokio::try_join!(
         cek_past_id::run(state),
         pic::run(state),
@@ -17,6 +17,14 @@ pub async fn run(state: &AppState) -> AppResult<()> {
         inventory::run(state),
         item_data::run(state)
     )?;
+    info!(
+        past_result_count = past_result.len(),
+        pic_count = pic.len(),
+        demand_count = dmd.len(),
+        inv_count = inv.len(),
+        pt_mstr_count = pt_mstr.len(),
+        "-->> Finished fetching batch data"
+    );
     let mut records: Vec<Record> = Vec::with_capacity(dmd.len() + inv.len());
     records.extend(dmd.into_iter().map(Record::Demand));
     records.extend(inv.into_iter().map(Record::Inventory));
@@ -24,7 +32,7 @@ pub async fn run(state: &AppState) -> AppResult<()> {
     let mut running_balance = Decimal::ZERO;
     let mut computed_results = Vec::with_capacity(records.len());
     let mut current_group: Option<(String, String)> = None;
-    info!("Processing Record...");
+    info!("-->> Main Processing Pick Now Record");
     for record in records {
         let item = record.item().to_string();
         let dept = record.dept().to_string();
@@ -52,10 +60,20 @@ pub async fn run(state: &AppState) -> AppResult<()> {
             past_result.iter().any(|dtx| dtx.wo_id == id)
         };
         // let exists: bool = past_result.iter().any(|dtx| dtx.wo_id == id);
-        let new_val = if exists == false {
-            "new".to_string()
-        } else {
-            String::new()
+        // let new_val = if exists == false {
+        //     "new".to_string()
+        // } else {
+        //     String::new()
+        // };
+        let new_val = match &record {
+            Record::Demand(_) => {
+                if exists == false {
+                    "new".to_string()
+                } else {
+                    String::new()
+                }
+            }
+            Record::Inventory(_) => String::new(), // ✅ Inventory increases balance (+)
         };
         let val_acc = running_balance.min(Decimal::ZERO);
         let pick: String = if val_acc < Decimal::ZERO {
@@ -82,7 +100,10 @@ pub async fn run(state: &AppState) -> AppResult<()> {
             record, val_acc, pick, new_val, opt, desc1, desc2,
         ));
     }
-    info!("Processed {:?} data", computed_results.len());
+    info!(
+        process_data = computed_results.len(),
+        "-->> Finish Processing data"
+    );
     inserts::run(state, computed_results).await?;
     delete::run(state).await?;
     Ok(())

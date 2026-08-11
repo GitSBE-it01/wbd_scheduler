@@ -4,9 +4,8 @@ use sqlx::{MySql, QueryBuilder};
 use tracing::{error, info};
 
 pub async fn run(state: &AppState, records: Vec<Combine>) -> AppResult<()> {
-    info!("Inserting data to databases...");
     if records.is_empty() {
-        error!("No Data To Entry...");
+        error!("!!>> No Data To Entry...");
         return Ok(());
     }
     let pool = state.pool();
@@ -45,6 +44,6 @@ pub async fn run(state: &AppState, records: Vec<Combine>) -> AppResult<()> {
         let result = query_builder.build().execute(pool).await?;
         total_rows_affected += result.rows_affected();
     }
-    info!("Total Data Inserts {:?}...", total_rows_affected);
+    info!(insert_data = total_rows_affected, "-->> Insertion Done");
     Ok(())
 }
