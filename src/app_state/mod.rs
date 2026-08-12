@@ -1,11 +1,13 @@
 use crate::app_config::AppConfig;
 use crate::app_error::{AppError, AppResult};
+use crate::app_state::clock::AppClock;
 use sqlx::ConnectOptions;
 use sqlx::{
     MySqlPool,
     mysql::{MySqlConnectOptions, MySqlPoolOptions},
 };
 use std::time::Duration;
+pub mod clock;
 use tracing::log::LevelFilter;
 use tracing::{error, info};
 pub mod telemetry;
@@ -14,13 +16,19 @@ pub mod telemetry;
 pub struct AppState {
     pub pool: MySqlPool, // No need for Arc
     pub config: AppConfig,
+    pub clock: clock::AppClock,
 }
 impl AppState {
     pub async fn new(config: AppConfig) -> AppResult<Self> {
         let pool = Self::build_pool(&config).await?;
         Self::test_connection(&pool).await?;
         info!("App State initialized");
-        Ok(Self { pool, config })
+        let clock = AppClock::new();
+        Ok(Self {
+            pool,
+            config,
+            clock,
+        })
     }
 
     async fn build_pool(config: &AppConfig) -> AppResult<MySqlPool> {

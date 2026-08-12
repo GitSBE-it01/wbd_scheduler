@@ -7,7 +7,6 @@ use crate::{
 use std::path::Path;
 use std::time::Instant;
 use tracing::{error, info};
-
 mod model;
 use model::ItemData;
 mod inserts;
@@ -22,20 +21,21 @@ pub async fn run(state: &AppState) -> AppResult<()> {
     let file_path = Path::new("./cache/");
     let filename = "cache_data__drawing.json";
     let fullpath = file_path.join(filename);
-    let has_data: bool = sqlx::query_as::<_, ItemData>(
+    let has_data: bool = sqlx::query_scalar::<_, i32>(
         r#"
-        SELECT  
-            item,
-            item_desc,
-            drawing_path
-        FROM db_wbd.pn_drawing WHERE data_date = CURDATE()
-        LIMIT 1
-        "#,
+    SELECT 1 
+    FROM db_wbd.pn_drawing 
+    WHERE data_date = ? 
+    LIMIT 1
+    "#,
     )
+    .bind(state.clock.today())
     .fetch_optional(state.pool())
     .await?
     .is_some();
+    println!("check has_data = {:#?}", has_data);
     if has_data == false {
+        info!("Running drawing processed");
         // Return early on error to prevent overwriting existing cache file
         let files = match get_filenames_from_dir(target_directory) {
             Ok(files) => files,
@@ -52,29 +52,25 @@ pub async fn run(state: &AppState) -> AppResult<()> {
         if files.is_empty() {
             error!(directory = %target_directory, "!!>> No files found or directory is empty");
         } else {
+            let target_path = Path::new(target_directory);
             let mut item_data_list: Vec<ItemData> = Vec::with_capacity(files.len());
             let pt_mstr = item_data::run(state).await?;
-            for file in &files {
-                // Get filename without allocating a Vec
-                let item_name = file.rsplit('\\').next().unwrap_or(file).to_string();
-
-                // Safely build full network path
-                let drawing_path = Path::new(target_directory)
-                    .join(file)
-                    .to_string_lossy()
-                    .into_owned();
-                let desc = pt_mstr
+            for part in pt_mstr {
+                if matches!(part.pt_status.as_deref(), Some("OBSOLETE")) {
+                    continue;
+                }
+                let item_lower = part.pt_part.to_lowercase();
+                let drawing_path = files
                     .iter()
-                    .find(|dtx| dtx.pt_part == item_name)
-                    .map(|dtx| dtx.desc.clone());
+                    .find(|file| file.to_lowercase().contains(&item_lower))
+                    .map(|file| target_path.join(file).to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "No Drawing".to_string());
                 item_data_list.push(ItemData {
-                    item: item_name,
-                    item_desc: desc,
+                    item: part.pt_part,
+                    item_desc: Some(part.desc),
                     drawing_path,
                 });
             }
-
-            // Save processed data to cache
             if !is_cache_valid(&fullpath, Some(18)).await? {
                 save_as_json(&item_data_list, file_path, filename).await?;
             }

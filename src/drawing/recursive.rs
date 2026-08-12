@@ -52,6 +52,7 @@ pub fn collect_filenames_recursive(
                     if !lowercased_name_str.contains("superseded")
                         && !lowercased_name_str.contains("adr")
                     {
+                        // println!("result = {:?}", name_str);
                         filenames.push(name_str.to_string());
                     }
                 } else {

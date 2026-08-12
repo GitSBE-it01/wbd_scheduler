@@ -59,12 +59,6 @@ pub async fn run(state: &AppState) -> AppResult<()> {
             // Normal check for other days
             past_result.iter().any(|dtx| dtx.wo_id == id)
         };
-        // let exists: bool = past_result.iter().any(|dtx| dtx.wo_id == id);
-        // let new_val = if exists == false {
-        //     "new".to_string()
-        // } else {
-        //     String::new()
-        // };
         let new_val = match &record {
             Record::Demand(_) => {
                 if exists == false {
@@ -91,11 +85,11 @@ pub async fn run(state: &AppState) -> AppResult<()> {
                 .find(|dtx| dtx.pt_part == id)
                 .map(|dtx| dtx.desc.clone())
         });
+        let item_lower = item.to_lowercase();
         let opt = pic
             .iter()
-            .find(|r| r.tipe == item)
+            .find(|r| r.tipe.to_lowercase().contains(&item_lower))
             .map(|found| found.pic.clone());
-        // ✅ Fixed: Construct Combine struct directly
         computed_results.push(Record::new(
             record, val_acc, pick, new_val, opt, desc1, desc2,
         ));

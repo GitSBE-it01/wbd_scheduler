@@ -18,7 +18,7 @@ pub async fn run(state: &AppState, records: Vec<Combine>) -> AppResult<()> {
           "
         );
         query_builder.push_values(chunk, |mut b, rec| {
-            b.push("CURDATE()")
+            b.push_bind(state.clock.today())
                 .push_bind(&rec.item)
                 .push_bind(&rec.desc1)
                 .push_bind(&rec.remark)

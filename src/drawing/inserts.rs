@@ -21,7 +21,7 @@ pub async fn run(state: &AppState, records: Vec<ItemData>) -> AppResult<()> {
             b.push_bind(&rec.item)
                 .push_bind(&rec.item_desc)
                 .push_bind(&rec.drawing_path)
-                .push_bind("CURDATE()");
+                .push_bind(state.clock.today());
         });
 
         let result = query_builder.build().execute(pool).await?;

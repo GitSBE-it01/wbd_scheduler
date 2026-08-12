@@ -38,9 +38,9 @@ pub async fn run(state: &AppState) -> AppResult<()> {
         INNER JOIN (
             SELECT DISTINCT (item)
             FROM dbpick_now.result_fix 
-            WHERE dept = ? AND data_date = CURDATE()
+            WHERE dept = ? AND data_date = ?
         ) b ON a.item = b.item
-        WHERE a.data_date = CURDATE()
+        WHERE a.data_date = ?
           AND a.dept IN (?, 'WH')
         ORDER BY 
             a.item ASC, 
@@ -57,6 +57,8 @@ pub async fn run(state: &AppState) -> AppResult<()> {
         if is_cache_valid(&fullpath, Some(18)).await? == false {
             let db_datas: Vec<CachePickNow> = sqlx::query_as::<_, CachePickNow>(sql)
                 .bind(dpt)
+                .bind(state.clock.today())
+                .bind(state.clock.today())
                 .bind(dpt)
                 .fetch_all(pool)
                 .await?;

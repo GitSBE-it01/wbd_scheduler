@@ -1,10 +1,9 @@
 use crate::app_error::{AppError, AppResult};
+use crate::app_state::clock;
 use rust_xlsxwriter::Workbook;
 use serde::Serialize;
 use serde_json::json;
 use std::path::Path;
-use time::OffsetDateTime;
-use time::macros::format_description;
 use tokio::fs;
 use tracing::info;
 
@@ -16,10 +15,9 @@ where
     let dir = dir_path.as_ref();
     fs::create_dir_all(dir).await?;
     let file_path = dir.join(file_name);
-    let format = format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]");
-    let created_at = OffsetDateTime::now_utc().format(&format)?;
+    let created_at = clock::AppClock::new();
     let payload = json!({
-        "expires_at": created_at,
+        "expires_at": created_at.timestamp(),
         "data": data
     });
     let item_count = payload["data"].as_array().map(|arr| arr.len());
@@ -56,7 +54,7 @@ where
             path: file_path.clone(),
             source: err,
         })?;
-    info!("Successfully exported CSV to {:?}", file_path);
+    info!(filepath = ?file_path, "-->> Successfully exported CSV to");
     Ok(())
 }
 
@@ -83,6 +81,6 @@ where
             path: file_path.clone(),
             source: err,
         })?;
-    info!("Successfully exported XLSX to {:?}", file_path);
+    info!(filepath = ?file_path, "-->> Successfully exported XLSX to");
     Ok(())
 }
