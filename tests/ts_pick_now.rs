@@ -3,11 +3,11 @@ use std::time::Instant;
 use tokio::fs;
 use tracing::{error, info};
 use wbd_scheduler::{
-    app_config::AppConfig,
-    app_error::{AppError, AppResult},
-    app_state::AppState,
-    app_utilities::{save_file::save_as_json, validation::is_cache_valid},
-    pick_now::model::Combine,
+    core::config::AppConfig,
+    core::error::{AppError, AppResult},
+    core::state::AppState,
+    core::utilities::{save_file::save_as_json, validation::is_cache_valid},
+    domain::pick_now::model::Combine,
 };
 
 #[tokio::test]
