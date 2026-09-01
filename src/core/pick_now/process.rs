@@ -1,0 +1,104 @@
+/*
+use crate::system::state::AppState;
+use rust_decimal::Decimal;
+use time::{OffsetDateTime, Weekday};
+use tracing::info;
+
+pub async fn run(state: &AppState) -> AppResult<()> {
+    info!("-->> Fetching data for process");
+    let (past_result, pic, dmd, inv, pt_mstr) = tokio::try_join!(
+        cek_past_id::run(state),
+        pic::run(state),
+        demand::run(state),
+        inventory::run(state),
+        ItemMstr::get(state)
+    )?;
+    info!(
+        past_result_count = past_result.len(),
+        pic_count = pic.len(),
+        demand_count = dmd.len(),
+        inv_count = inv.len(),
+        pt_mstr_count = pt_mstr.len(),
+        "-->> Finished fetching batch data"
+    );
+    let mut records: Vec<Record> = Vec::with_capacity(dmd.len() + inv.len());
+    records.extend(dmd.into_iter().map(Record::Demand));
+    records.extend(inv.into_iter().map(Record::Inventory));
+    records.sort_by(|a, b| (a.dept(), a.item(), a._date()).cmp(&(b.dept(), b.item(), b._date())));
+    let mut running_balance = Decimal::ZERO;
+    let mut computed_results = Vec::with_capacity(records.len());
+    let mut current_group: Option<(String, String)> = None;
+    info!("-->> Main Processing Pick Now Record");
+    for record in records {
+        let item = record.item().to_string();
+        let dept = record.dept().to_string();
+        let id = record.lot_id().to_string();
+        let key = (item.clone(), dept.clone());
+        if current_group.as_ref() != Some(&key) {
+            running_balance = Decimal::ZERO; // 🔄 Reset running total for the new group
+            current_group = Some(key);
+        }
+        let delta = match &record {
+            Record::Demand(_) => -record.qty(), // ✅ Fixed: Demands decrease balance (-)
+            Record::Inventory(_) => record.qty_oh(), // ✅ Inventory increases balance (+)
+        };
+        running_balance += delta;
+        let now = OffsetDateTime::now_local()
+            .unwrap_or_else(|_| OffsetDateTime::now_utc())
+            .date();
+        let current_day = now.weekday();
+        let exists = if matches!(
+            current_day,
+            Weekday::Saturday | Weekday::Sunday | Weekday::Monday
+        ) {
+            !past_result
+                .iter()
+                .any(|dtx| dtx.wo_id == id && dtx.id_new == "new")
+        } else {
+            // Normal check for other days
+            past_result.iter().any(|dtx| dtx.wo_id == id)
+        };
+        let new_val = match &record {
+            Record::Demand(_) => {
+                if exists == false {
+                    "new".to_string()
+                } else {
+                    String::new()
+                }
+            }
+            Record::Inventory(_) => String::new(), // ✅ Inventory increases balance (+)
+        };
+        let val_acc = running_balance.min(Decimal::ZERO);
+        let pick: String = if val_acc < Decimal::ZERO {
+            "Pick".to_string()
+        } else {
+            String::new()
+        };
+        let desc1: Option<String> = pt_mstr
+            .iter()
+            .find(|dtx| dtx.pt_part == item)
+            .map(|dtx| dtx.desc.clone());
+        let desc2: Option<String> = record.item_id().and_then(|id| {
+            pt_mstr
+                .iter()
+                .find(|dtx| dtx.pt_part == id)
+                .map(|dtx| dtx.desc.clone())
+        });
+        let item_lower = item.to_lowercase();
+        let opt = pic
+            .iter()
+            .find(|r| r.tipe.to_lowercase().contains(&item_lower))
+            .map(|found| found.pic.clone());
+        computed_results.push(Record::new(
+            record, val_acc, pick, new_val, opt, desc1, desc2,
+        ));
+    }
+    info!(
+        process_data = computed_results.len(),
+        "-->> Finish Processing data"
+    );
+    inserts::run(state, computed_results).await?;
+    delete::run(state).await?;
+    Ok(())
+}
+ */

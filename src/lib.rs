@@ -1,3 +1,4 @@
-pub mod cli;
+pub mod app;
+pub mod client;
 pub mod core;
-pub mod domain;
+pub mod system;
