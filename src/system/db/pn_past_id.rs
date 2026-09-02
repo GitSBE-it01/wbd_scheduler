@@ -23,7 +23,7 @@ impl PnPastID {
                         GROUP BY lot__id
                 "#,
         )
-        .bind(state.clock.today())
+        .bind(state.clock.date_stringfy(-1, None))
         .fetch_all(pool)
         .await?;
         Ok(datas)

@@ -59,7 +59,7 @@ pub struct QadItemMstr {
 }
 
 impl QadItemMstr {
-    pub async fn get(state: &AppState) -> Result<Vec<Self>, DbError> {
+    pub async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
         let pool = state.pool();
         let datas = sqlx::query_as::<_, Self>(
             r#"

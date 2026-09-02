@@ -9,7 +9,7 @@ where
     T: Serialize,
     P: AsRef<Path>,
 {
-    if data.len() == 0 {
+    if data.is_empty() {
         return Err(IoError::EmptyData);
     }
     let dir = dir_path.as_ref();

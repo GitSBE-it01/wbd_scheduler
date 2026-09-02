@@ -148,7 +148,7 @@ impl PnResult {
     pub async fn delete(state: &AppState) -> Result<u64, DbError> {
         let pool = state.pool();
         let del_past = sqlx::query("DELETE FROM dbpick_now.result_fix WHERE data_date = ?")
-            .bind(state.clock.date_stringfy(-3))
+            .bind(state.clock.date_stringfy(-3, None))
             .execute(pool)
             .await?;
         let rows_deleted = del_past.rows_affected();
