@@ -1,4 +1,5 @@
-use crate::system::{cache::FileCacheable, db::error::DbError, state::AppState};
+use crate::system::cache::Cacheable;
+use crate::system::{db::error::DbError, state::AppState};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::path::Path;
@@ -27,20 +28,16 @@ impl PnPic {
     }
 }
 
-impl FileCacheable for PnPic {
-    fn cache_filename(key: Option<&str>) -> String {
-        if let Some(key) = key {
-            format!("pn_pic__{}.json", key)
-        } else {
-            format!("pn_pic.json")
-        }
+impl Cacheable for PnPic {
+    type Key = String;
+
+    fn namespace() -> &'static str {
+        ""
     }
 
-    fn default_ttl() -> Duration {
-        Duration::from_secs(60 * 60 * 12) // 1 day
-    }
-
-    fn cache_sub_dir() -> &'static Path {
-        &Path::new("./cache/")
+    fn ttl() -> Duration {
+        Duration::from_secs(60 * 60 * 12) // 1 hour
     }
 }
+
+

@@ -1,85 +1,83 @@
-use crate::system::cache::FileCacheable;
-use crate::system::cache::error::CacheError;
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use std::path::Path;
-use std::path::PathBuf;
-use std::time::Duration;
-use tokio::fs;
+use crate::system::cache::Cacheable;
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 
-pub struct FileCacheStore {
-    root_dir: PathBuf,
+#[derive(Serialize, Deserialize)]
+struct CacheEnvelope<T> {
+    cached_at: SystemTime,
+    data: T,
 }
 
-impl FileCacheStore {
-    pub fn new(root_dir: impl Into<PathBuf>) -> Self {
+pub struct Cache {
+    base_dir: Option<PathBuf>,
+}
+
+impl Cache {
+    pub fn new<P: AsRef<Path>>(base_dir: P) -> Self {
         Self {
-            root_dir: root_dir.into(),
+            base_dir: base_dir.as_ref().to_path_buf().into(),
         }
     }
 
-    /// Resolves full path: root + sub_dir + filename
-    pub fn resolve_path<T: FileCacheable>(&self, key: Option<&str>) -> PathBuf {
-        self.root_dir
-            .join(T::cache_sub_dir())
-            .join(T::cache_filename(key))
+    /// Helper to resolve the path: base_dir / namespace / key.json
+    fn resolve_path<T: Cacheable>(&self, key: &T::Key) -> PathBuf {
+        self.base_dir
+            .join(T::namespace())
+            .join(format!("{}.json", key))
     }
 
-    /// Check if cache file exists and is still within TTL
-    pub async fn validate<T: FileCacheable>(
-        &self,
-        key: Option<&str>,
-        custom_ttl: Option<Duration>,
-    ) -> bool {
+    /// Generic Fetch: Reads file, deserializes envelope, checks TTL validation.
+    pub fn get<T: Cacheable>(&self, key: &T::Key) -> Option<T> {
         let path = self.resolve_path::<T>(key);
-        let Ok(meta) = fs::metadata(&path).await else {
-            return false;
-        };
-        let Ok(modified) = meta.modified() else {
-            return false;
-        };
-        let Ok(elapsed) = modified.elapsed() else {
-            return false;
-        };
+        let content = fs::read_to_string(path).ok()?;
 
-        let ttl = custom_ttl.unwrap_or_else(T::default_ttl);
-        elapsed < ttl
+        let envelope: CacheEnvelope<T> = serde_json::from_str(&content).ok()?;
+
+        // Validation check: ensure cache hasn't expired
+        let elapsed = envelope.cached_at.elapsed().ok()?;
+        if elapsed > T::ttl() {
+            // Expired! Invalidate lazily.
+            let _ = self.delete::<T>(key);
+            return None;
+        }
+
+        Some(envelope.data)
     }
 
-    /// Save data as JSON
-    pub async fn save<T: FileCacheable + Serialize>(
-        &self,
-        key: Option<&str>,
-        data: &[T],
-    ) -> Result<(), std::io::Error> {
+    /// Generic Save: Wraps value in metadata and writes to disk.
+    pub fn put<T: Cacheable>(&self, key: &T::Key, data: &T) -> Result<(), std::io::Error> {
         let path = self.resolve_path::<T>(key);
+
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).await?;
+            fs::create_dir_all(parent)?;
         }
-        let json = serde_json::to_vec(data)?;
-        fs::write(path, json).await
+
+        let envelope = CacheEnvelope {
+            cached_at: SystemTime::now(),
+            data,
+        };
+
+        let json = serde_json::to_string_pretty(&envelope)?;
+        fs::write(path, json)
     }
 
-    /// Delete cache file
-    pub async fn delete<T: FileCacheable>(&self, key: Option<&str>) -> Result<(), std::io::Error> {
+    /// Generic Delete
+    pub fn delete<T: Cacheable>(&self, key: &T::Key) -> Result<(), std::io::Error> {
         let path = self.resolve_path::<T>(key);
         if path.exists() {
-            fs::remove_file(path).await?;
+            fs::remove_file(path)?;
         }
         Ok(())
     }
 }
 
-#[derive(Deserialize)]
-struct CacheWrapper<T> {
-    data: T,
+pub trait CacheableExt: Cacheable {
+    fn save_cache(&self, key: &Self::Key, store: &DiskCacheStore) -> Result<(), std::io::Error> {
+        store.put::<Self>(key, self)
+    }
 }
 
-pub async fn read_data<T>(fullpath: impl AsRef<Path>) -> Result<Vec<T>, CacheError>
-where
-    T: DeserializeOwned,
-{
-    let json_content = fs::read_to_string(fullpath).await?;
-    let wrapper: CacheWrapper<Vec<T>> = serde_json::from_str(&json_content)?;
-    Ok(wrapper.data)
-}
+// Blanket implementation: automatically applies to any struct implementing `Cacheable`
+impl<T: Cacheable> CacheableExt for T {}

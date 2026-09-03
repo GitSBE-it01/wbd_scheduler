@@ -1,16 +1,31 @@
 pub mod error;
 pub mod pick_now;
+use crate::system::{config::AppConfig, state::AppState};
 use serde::{Deserialize, Serialize};
 // pub mod drawing_catalog;
 // pub mod new_type_report;
 // use crate::system::config::AppConfig;
 // use crate::system::state::AppState;
 pub use error::AppError;
-// use std::time::Instant;
-// use tracing::info;
+use std::time::Instant;
+use tracing::info;
 
 pub async fn main_handler() -> Result<(), AppError> {
-    todo!()
+    info!("Starting Schedule... ");
+    let config = AppConfig::new(".env")?;
+    let state = AppState::new(config).await?;
+    info!("Running Drawing Catalog... ");
+    let mut time_record = Instant::now();
+    // pick_now::handler(&state).await?;
+    let mut elapsed = time_record.elapsed();
+    info!(duration = ?elapsed, "Finished Drawing Catalog... ");
+    info!("Running Pick Now... ");
+    time_record = Instant::now();
+    pick_now::handler(&state).await?;
+    elapsed = time_record.elapsed();
+    info!(duration = ?elapsed, "Finished Pick Now... ");
+    info!("Finished Scheduler... ");
+    Ok(())
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -41,12 +56,11 @@ pub struct WoBrowseRecord {
     pub fixed_r: String,
 }
 
-#[warn(unused_imports)]
-#[warn(unused_variables)]
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::core::pick_now::model::Record;
+    use crate::system::cache;
     use crate::system::config::AppConfig;
     use crate::system::db::{
         pn_demand::PnDemand, pn_dept_inv::PnInv, pn_past_id::PnPastID, pn_pic::PnPic,
@@ -57,6 +71,15 @@ mod tests {
     use error::AppError;
     use rust_decimal::Decimal;
     use time::{OffsetDateTime, Weekday};
+    #[tokio::test]
+    async fn test_cache() -> Result<(), AppError> {
+        let config = AppConfig::new(".env")?;
+        let state = AppState::new(config).await?;
+        let dmd: Vec<PnPic> = PnPic::fetch_db(&state).await?;
+        let store = cache::CacheEngine::new("./cache");
+        store.put(&"pn_pic", &dmd).expect("Failed to write cache");
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_dmd() -> Result<(), AppError> {
@@ -78,6 +101,7 @@ mod tests {
             PnInv::fetch_db(&state),
             QadItemMstr::fetch_db(&state)
         )?;
+        save_as_csv(&past_result, Path::new("./cache/"), "past_result.csv").await?;
         println!(
             "Fetched {} past_result, {} pic, {} dmd, {} inv, {} pt_mstr",
             past_result.len(),
@@ -92,7 +116,7 @@ mod tests {
         records
             .sort_by(|a, b| (a.dept(), a.item(), a._date()).cmp(&(b.dept(), b.item(), b._date())));
         let mut running_balance = Decimal::ZERO;
-        let mut computed_results: Vec<PnResult> = Vec::with_capacity(records.len());
+        let mut transform_to_result: Vec<PnResult> = Vec::with_capacity(records.len());
         let mut current_group: Option<(String, String)> = None;
         let mut cek_new = 0;
         for record in records {
@@ -100,54 +124,6 @@ mod tests {
             let dept = record.dept().to_string();
             let id = record.lot_id().to_string();
             let key = (item.clone(), dept.clone());
-            if current_group.as_ref() != Some(&key) {
-                running_balance = Decimal::ZERO; // 🔄 Reset running total for the new group
-                current_group = Some(key);
-            }
-            let delta = match &record {
-                Record::Demand(_) => -record.qty(), // ✅ Fixed: Demands decrease balance (-)
-                Record::Inventory(_) => record.qty_oh(), // ✅ Inventory increases balance (+)
-            };
-            running_balance += delta;
-            let now = OffsetDateTime::now_local()
-                .unwrap_or_else(|_| OffsetDateTime::now_utc())
-                .date();
-            let current_day = now.weekday();
-            let curr_id_exist_in_past = past_result.iter().any(|dtx| dtx.wo_id == id);
-            let curr_id_is_new_in_past = past_result
-                .iter()
-                .any(|dtx| dtx.wo_id == id && dtx.id_new == "new");
-            let exists: bool = if matches!(
-                current_day,
-                Weekday::Saturday | Weekday::Sunday | Weekday::Monday
-            ) {
-                if curr_id_exist_in_past {
-                    if curr_id_is_new_in_past { true } else { false }
-                } else {
-                    true
-                }
-            } else {
-                if curr_id_exist_in_past { false } else { true }
-            };
-            let new_val = match &record {
-                Record::Demand(_) => {
-                    if exists == false {
-                        "new".to_string()
-                    } else {
-                        String::new()
-                    }
-                }
-                Record::Inventory(_) => String::new(), // ✅ Inventory increases balance (+)
-            };
-            if new_val == "new" {
-                cek_new += 1;
-            }
-            let val_acc = running_balance.min(Decimal::ZERO);
-            let pick: String = if val_acc < Decimal::ZERO {
-                "Pick".to_string()
-            } else {
-                String::new()
-            };
             let desc1: Option<String> = pt_mstr
                 .iter()
                 .find(|dtx| dtx.pt_part == item)
@@ -172,7 +148,7 @@ mod tests {
                     loc__line: Some(d.loc_line),
                     dept: d.dept,
                     qty: Decimal::from_f64_retain(d.qty).unwrap_or(Decimal::ZERO),
-                    valAcc: val_acc,
+                    valAcc: Decimal::ZERO,
                     qty_OH: Decimal::ZERO,
                     lotOH: None,
                     _date: d.rel_dt,
@@ -180,8 +156,8 @@ mod tests {
                     due_dt: d.due_dt,
                     wo_rmks: Some(d.wo_rmks),
                     pic: opt,
-                    pick: pick,
-                    id_new: new_val,
+                    pick: String::new(),
+                    id_new: String::new(),
                     item_id: Some(d.item_id),
                     _desc2: desc2,
                     old_id: Some(d.old_id),
@@ -194,7 +170,7 @@ mod tests {
                     loc__line: None,
                     dept: i.dept,
                     qty: Decimal::ZERO,
-                    valAcc: val_acc,
+                    valAcc: Decimal::ZERO,
                     qty_OH: Decimal::from_f64_retain(i.qty_oh).unwrap_or(Decimal::ZERO),
                     lotOH: Some(i.lot_oh),
                     _date: i._date,
@@ -202,16 +178,114 @@ mod tests {
                     due_dt: None,
                     wo_rmks: None,
                     pic: opt,
-                    pick: pick,
-                    id_new: new_val,
+                    pick: String::new(),
+                    id_new: String::new(),
                     item_id: None,
                     old_id: None,
                     _desc2: desc2,
                 },
             };
+            transform_to_result.push(row);
+        }
+        save_as_csv(
+            &transform_to_result,
+            Path::new("./cache/"),
+            "transform_to_result.csv",
+        )
+        .await?;
+        transform_to_result
+            .sort_by(|a, b| (&a.dept, &a.item, &a._date).cmp(&(&b.dept, &b.item, &b._date)));
+        let mut computed_results: Vec<PnResult> = Vec::with_capacity(transform_to_result.len());
+        for record in transform_to_result {
+            let key = (record.item.clone(), record.dept.clone());
+            if current_group.as_ref() != Some(&key) {
+                running_balance = Decimal::ZERO; // 🔄 Reset running total for the new group
+                current_group = Some(key);
+            }
+            let delta = if &record.remark == "2.demand" {
+                -record.qty // ✅ Demands decrease balance (-)
+            } else {
+                record.qty_OH // ✅ Inventory increases balance (+)
+            };
+            running_balance += delta;
+            let now = OffsetDateTime::now_local()
+                .unwrap_or_else(|_| OffsetDateTime::now_utc())
+                .date();
+            let current_day = now.weekday();
+            let curr_id_exist_in_past = record
+                .lot__id
+                .as_ref()
+                .is_some_and(|lot_id| past_result.iter().any(|dtx| &dtx.wo_id == lot_id));
+            let curr_id_is_new_in_past = record.lot__id.as_ref().is_some_and(|lot_id| {
+                past_result
+                    .iter()
+                    .any(|dtx| &dtx.wo_id == lot_id && dtx.id_new == "new")
+            });
+            // let curr_id_exist_in_past = past_result.iter().any(|dtx| dtx.wo_id == id);
+            // let curr_id_is_new_in_past = past_result
+            //     .iter()
+            //     .any(|dtx| dtx.wo_id == id && dtx.id_new == "new");
+            let exists: bool = if matches!(
+                current_day,
+                Weekday::Saturday | Weekday::Sunday | Weekday::Monday
+            ) {
+                if curr_id_exist_in_past {
+                    if curr_id_is_new_in_past { true } else { false }
+                } else {
+                    true
+                }
+            } else {
+                if curr_id_exist_in_past { false } else { true }
+            };
+            let new_val = if &record.remark == "2.demand" {
+                if exists == true {
+                    "new".to_string()
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+            if new_val == "new" {
+                cek_new += 1;
+            }
+            let val_acc = running_balance.min(Decimal::ZERO);
+            let pick: String = if val_acc < Decimal::ZERO {
+                "Pick".to_string()
+            } else {
+                String::new()
+            };
+
+            let row = PnResult {
+                item: record.item,
+                _desc: record._desc,
+                remark: record.remark,
+                lot__id: record.lot__id,
+                loc__line: record.loc__line,
+                dept: record.dept,
+                qty: record.qty,
+                valAcc: record.valAcc,
+                qty_OH: record.qty_OH,
+                lotOH: record.lotOH,
+                _date: record._date,
+                rel_dt: record.rel_dt,
+                due_dt: record.due_dt,
+                wo_rmks: record.wo_rmks,
+                pic: record.pic,
+                pick: pick,
+                id_new: new_val,
+                item_id: record.item_id,
+                _desc2: record._desc2,
+                old_id: record.old_id,
+            };
             computed_results.push(row);
         }
-        println!("Computed {} results", computed_results.len());
+        save_as_csv(
+            &computed_results,
+            Path::new("./cache/"),
+            "computed_results.csv",
+        )
+        .await?;
         let mut count_new = 0;
         let mut count_service_data = 0;
         let mut count_service_data_new = 0;
@@ -230,7 +304,7 @@ mod tests {
                 if r.id_new == "new" {
                     count_service_data_new += 1;
                     // println!(
-                    //     "Service Data New: item = {}, lot_id = {}",
+                    //     "Service Data Ne1: item = {}, lot_id = {}",
                     //     r.item,
                     //     r.lot__id.as_deref().unwrap_or("N/A")
                     // );

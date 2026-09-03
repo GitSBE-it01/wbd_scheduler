@@ -3,6 +3,7 @@ use tracing::error;
 use wbd_scheduler::app::main_handler;
 use wbd_scheduler::system::state::telemetry;
 
+
 #[tokio::main]
 async fn main() -> ExitCode {
     let _guard = telemetry::init_telemetry("./logs", "scheduler.log");

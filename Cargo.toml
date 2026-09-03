@@ -3,9 +3,6 @@ name = "wbd_scheduler"
 version = "0.1.0"
 edition = "2024"
 
-[lints.rust]
-non_snake_case = "allow"
-
 [dependencies]
 csv = "1.4.0"
 # -- Environment and Configuration
