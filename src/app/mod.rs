@@ -61,6 +61,7 @@ mod tests {
     use super::*;
     use crate::core::pick_now::model::Record;
     use crate::system::cache;
+    use crate::system::db::DatabaseCacheable;
     use crate::system::config::AppConfig;
     use crate::system::db::{
         pn_demand::PnDemand, pn_dept_inv::PnInv, pn_past_id::PnPastID, pn_pic::PnPic,
@@ -77,7 +78,7 @@ mod tests {
         let state = AppState::new(config).await?;
         let dmd: Vec<PnPic> = PnPic::fetch_db(&state).await?;
         let store = cache::CacheEngine::new("./cache");
-        store.put(&"pn_pic", &dmd).expect("Failed to write cache");
+        // store.put(&"pn_pic", &dmd).expect("Failed to write cache");
         Ok(())
     }
 
@@ -264,7 +265,7 @@ mod tests {
                 loc__line: record.loc__line,
                 dept: record.dept,
                 qty: record.qty,
-                valAcc: record.valAcc,
+                valAcc: val_acc,
                 qty_OH: record.qty_OH,
                 lotOH: record.lotOH,
                 _date: record._date,

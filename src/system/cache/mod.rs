@@ -1,21 +1,21 @@
 pub mod error;
-// pub mod file_cache;
-pub mod validation;
+use crate::system::db::DatabaseCacheable;
+use crate::system::state::AppState;
+use error::CacheError;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
-
+use time::{Duration, OffsetDateTime};
 pub trait Cacheable: Serialize + DeserializeOwned {
     type Key: std::fmt::Display;
     fn namespace() -> &'static str;
-    fn ttl() -> Duration;
+    fn ttl() -> i64;
 }
 
 #[derive(Serialize, Deserialize)]
-struct CacheEnvelope<T> {
-    cached_at: SystemTime,
-    data: T,
+pub struct CacheResult<T> {
+    expires_at: String,
+    pub data: Vec<T>,
 }
 
 pub struct CacheEngine {
@@ -36,80 +36,75 @@ impl CacheEngine {
             .join(format!("{}.json", key))
     }
 
-    /// Generic Fetch: Reads file, deserializes envelope, checks TTL validation.
-    pub fn get<T: Cacheable>(&self, key: &T::Key) -> Option<T> {
+    pub async fn db_handler<T>(
+        &self,
+        state: &AppState,
+        key: T::Key,
+    ) -> Result<CacheResult<T>, CacheError>
+    where
+        T: DatabaseCacheable + Clone,
+    {
+        if let Some(cached_data) = self.get::<T>(state, &key) {
+            return Ok(cached_data);
+        }
+        let fresh_data: Vec<T> = T::fetch_db(state).await?;
+        let result = self.put::<T>(state, &key, fresh_data)?;
+        Ok(result)
+    }
+
+    // pub fn get<T: Cacheable>(&self, state: &AppState, key: &T::Key) -> Option<Vec<T>>
+    pub fn get<T: Cacheable>(&self, state: &AppState, key: &T::Key) -> Option<CacheResult<T>> {
         let path = self.resolve_path::<T>(key);
-        let content = fs::read_to_string(path).ok()?;
-
-        let envelope: CacheEnvelope<T> = serde_json::from_str(&content).ok()?;
-
-        // Validation check: ensure cache hasn't expired
-        let elapsed = envelope.cached_at.elapsed().ok()?;
-        if elapsed > T::ttl() {
-            // Expired! Invalidate lazily.
+        let content = fs::read_to_string(&path).ok()?;
+        let now = state.clock.now();
+        let envelope: CacheResult<T> = match serde_json::from_str(&content) {
+            Ok(env) => env,
+            Err(_) => {
+                let _ = fs::remove_file(&path);
+                return None;
+            }
+        };
+        let created_at = match state.clock.parse_local_str(&envelope.expires_at) {
+            Ok(dt) => dt,
+            Err(_) => {
+                let _ = self.delete::<T>(key);
+                return None;
+            }
+        };
+        let elapsed = now.unix_timestamp() - created_at.unix_timestamp();
+        if elapsed.is_negative() || elapsed > T::ttl() {
             let _ = self.delete::<T>(key);
             return None;
         }
-
-        Some(envelope.data)
+        Some(envelope)
     }
 
-    /// Generic Save: Wraps value in metadata and writes to disk.
-    pub fn put<T: Cacheable>(&self, key: &T::Key, data: &T) -> Result<(), std::io::Error> {
+    pub fn put<T: Cacheable>(
+        &self,
+        state: &AppState,
+        key: &T::Key,
+        data: Vec<T>,
+    ) -> Result<CacheResult<T>, CacheError> {
         let path = self.resolve_path::<T>(key);
 
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-
-        let envelope = CacheEnvelope {
-            cached_at: SystemTime::now(),
+        let envelope = CacheResult {
+            expires_at: state.clock.timestamp(),
             data,
         };
-
         let json = serde_json::to_string_pretty(&envelope)?;
-        fs::write(path, json)
+        fs::write(path, json)?;
+        Ok(envelope)
     }
 
     /// Generic Delete
-    pub fn delete<T: Cacheable>(&self, key: &T::Key) -> Result<(), std::io::Error> {
+    pub fn delete<T: Cacheable>(&self, key: &T::Key) -> Result<(), CacheError> {
         let path = self.resolve_path::<T>(key);
         if path.exists() {
             fs::remove_file(path)?;
         }
         Ok(())
     }
-
-    pub async fn get_or_compute<T, F, Fut>(
-        &self,
-        key: &T::Key,
-        compute: F,
-    ) -> Result<T, Box<dyn std::error::Error>>
-    where
-        T: Cacheable,
-        F: FnOnce() -> Fut,
-        Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error>>>,
-    {
-        // 1. Check if cache exists and is fresh according to T::ttl()
-        if let Ok(Some(cached_data)) = self.get::<T>(key).await {
-            return Ok(cached_data);
-        }
-
-        // 2. Cache hit failed or stale -> run the computation closure
-        let fresh_data = compute().await?;
-
-        // 3. Automatically save the fresh result
-        self.put::<T>(key, &fresh_data).await?;
-
-        Ok(fresh_data)
-    }
 }
-
-pub trait CacheableExt: Cacheable {
-    fn save_cache(&self, key: &Self::Key, store: &CacheEngine) -> Result<(), std::io::Error> {
-        store.put::<Self>(key, self)
-    }
-}
-
-// Blanket implementation: automatically applies to any struct implementing `Cacheable`
-impl<T: Cacheable> CacheableExt for T {}

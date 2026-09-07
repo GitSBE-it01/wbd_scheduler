@@ -58,8 +58,9 @@ pub struct QadItemMstr {
     pub pt_site: Option<String>,
 }
 
-impl QadItemMstr {
-    pub async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
+use crate::system::db::DatabaseCacheable;
+impl DatabaseCacheable for QadItemMstr {
+    async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
         let pool = state.pool();
         let datas = sqlx::query_as::<_, Self>(
             r#"
@@ -121,5 +122,40 @@ impl QadItemMstr {
         .fetch_all(pool)
         .await?;
         Ok(datas)
+    }
+}
+
+use crate::system::cache::Cacheable;
+use std::time::Duration;
+impl Cacheable for QadItemMstr {
+    type Key = String;
+
+    fn namespace() -> &'static str {
+        "qad" // Saved to ./cache_dir/scans/<key>.json
+    }
+    fn ttl() -> i64 {
+        60 * 60 * 12 // Fresh for 1 hour
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::error::AppError;
+    use crate::system::cache;
+    use crate::system::cache::error::CacheError;
+    use crate::system::config::AppConfig;
+    use crate::system::db::qad_item::QadItemMstr;
+    use crate::system::io::csv::{load_csv_data, save_as_csv};
+    #[tokio::test]
+    async fn test_cache_item() -> Result<(), AppError> {
+        let config = AppConfig::new(".env")?;
+        let state = AppState::new(config).await?;
+        // let data: Vec<QadItemMstr> = QadItemMstr::fetch_db(&state).await?;
+        let store = cache::CacheEngine::new("./cache");
+        store
+            .db_handler::<QadItemMstr>(&state, "items".to_string())
+            .await?;
+        Ok(())
     }
 }

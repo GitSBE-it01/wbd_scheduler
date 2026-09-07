@@ -13,8 +13,10 @@ pub struct PnInv {
     pub _date: Option<Date>,
     pub lot_oh: String,
 }
-impl PnInv {
-    pub async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
+
+use crate::system::db::DatabaseCacheable;
+impl DatabaseCacheable for PnInv {
+    async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
         let pool = state.pool();
         let datas = sqlx::query_as::<_, Self>(
             r#"
@@ -47,5 +49,19 @@ impl PnInv {
             .await?;
 
         Ok(datas)
+    }
+}
+
+use crate::system::cache::Cacheable;
+use std::time::Duration;
+impl Cacheable for PnInv {
+    type Key = String;
+
+    fn namespace() -> &'static str {
+        "pn" // Saved to ./cache_dir/scans/<key>.json
+    }
+
+    fn ttl() -> i64 {
+        60 * 60 * 12 // Fresh for 1 hour
     }
 }

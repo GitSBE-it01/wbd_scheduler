@@ -9,6 +9,4 @@ pub enum DbError {
     DbError(#[from] sqlx::Error),
     #[error("No Record To Insert")]
     NoRecordInsert,
-    #[error("Caching Error: {0}")]
-    CacheError(#[from] CacheError),
 }

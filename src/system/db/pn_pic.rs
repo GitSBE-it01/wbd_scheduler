@@ -10,8 +10,11 @@ pub struct PnPic {
     pub tipe: String,
     pub pic: String,
 }
-impl PnPic {
-    pub async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
+
+use crate::system::db::DatabaseCacheable;
+
+impl DatabaseCacheable for PnPic {
+    async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
         let pool = state.pool();
         let datas = sqlx::query_as::<_, Self>(
             r#"
@@ -32,12 +35,10 @@ impl Cacheable for PnPic {
     type Key = String;
 
     fn namespace() -> &'static str {
-        ""
+        "pn" // Saved to ./cache_dir/scans/<key>.json
     }
 
-    fn ttl() -> Duration {
-        Duration::from_secs(60 * 60 * 12) // 1 hour
+    fn ttl() -> i64 {
+        60 * 60 * 12 // Fresh for 1 hour
     }
 }
-
-

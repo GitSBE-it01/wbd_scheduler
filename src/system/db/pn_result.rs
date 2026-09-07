@@ -2,10 +2,10 @@ use crate::system::{db::error::DbError, state::AppState};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, MySql, QueryBuilder};
+use time;
 use time::Date;
 time::serde::format_description!(date_format, Date, "[year]-[month]-[day]");
 
-#[allow(non_snake_case)]
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize, PartialEq)]
 pub struct PnResult {
     pub item: String,
@@ -154,50 +154,67 @@ impl PnResult {
         let rows_deleted = del_past.rows_affected();
         Ok(rows_deleted)
     }
+
+    pub async fn fetch_filter_dpt(state: &AppState, dpt: &str) -> Result<Vec<Self>, DbError> {
+        let pool = state.pool();
+        let sql = r#"
+        SELECT 
+            a.item,
+            a._desc,
+            a.remark,
+            a.lot__id,
+            a.loc__line,
+            a.dept,
+            a.qty,
+            a.valAcc,
+            a.qty_OH,
+            a.lotOH,
+            CAST(a._date AS DATE) AS '_date',
+            CAST(a.rel_dt AS DATE) AS 'rel_dt',
+            CAST(a.due_dt AS DATE) AS 'due_dt',
+            a.wo_rmks,
+            a.pic,
+            a.pick,
+            a.id_new,
+            a.item_id,
+            a._desc2,
+            a.old_id
+        FROM dbpick_now.result_fix a
+        INNER JOIN (
+            SELECT DISTINCT (item)
+            FROM dbpick_now.result_fix 
+            WHERE dept = ? AND data_date = ?
+        ) b ON a.item = b.item
+        WHERE a.data_date = ?
+          AND a.dept IN (?, 'WH')
+        ORDER BY 
+            a.item ASC, 
+            (a.dept = 'WH') DESC, 
+            remark ASC, 
+            _date ASC, 
+            due_dt ASC, 
+            lot__id ASC
+    "#;
+        let db_datas: Vec<Self> = sqlx::query_as::<_, Self>(sql)
+            .bind(dpt)
+            .bind(state.clock.today())
+            .bind(state.clock.today())
+            .bind(dpt)
+            .fetch_all(pool)
+            .await?;
+        Ok(db_datas)
+    }
 }
 
-/*
-pub async fn get_data(state: &AppState, dpt: &str) -> Result<Vec<Self>, DbError> {
-       let file_path = Path::new("//192.168.2.103/xampp/htdocs/wbd/_cache/pick_now/");
-       let filename = format!("pn_cache_reslt__{dpt}.json");
-       let fullpath = Path::join(file_path, filename);
-       let records = if is_cache_valid(&fullpath, Some(1)).await? {
-           let db_datas: Vec<Self> = read_data(&fullpath).await?;
-           db_datas
-       } else {
-           let db_datas: Vec<Self> = Self::fetch_current_data(state, dpt).await?;
-           db_datas
-       };
-       Ok(records)
-   }
+use crate::system::cache::Cacheable;
+impl Cacheable for PnResult {
+    type Key = String;
 
-   pub async fn caching_all(state: &AppState, ttl: Option<i64>) -> Result<Vec<String>, DbError> {
-       let depts = [
-           "P1.ASSY", "PROD1.VC", "WH_ASSY", "SBE3", "SBE4", "PROD2", "PROD3", "QA", "SUBCON",
-           "WOODWORK", // Removed duplicate "SBE4"
-       ];
+    fn namespace() -> &'static str {
+        "pick_now" // Saved to ./cache_dir/scans/<key>.json
+    }
 
-       let mut results = Vec::with_capacity(depts.len());
-       let fix_ttl: i64 = ttl.unwrap_or(3600);
-       let file_path = Path::new("//192.168.2.103/xampp/htdocs/wbd/_cache/pick_now/");
-
-       for dpt in depts {
-           let filename = format!("pn_cache_reslt__{dpt}.json");
-           let fullpath = file_path.join(&filename);
-
-           if !is_cache_valid(&fullpath, Some(fix_ttl)).await? {
-               // FIXED: Replaced `self.` with `Self::` and passed `dpt` directly
-               let db_data: Vec<Self> = Self::fetch_current_data(state, dpt).await?;
-
-               save_as_json(&db_data, file_path, &filename).await?;
-
-               results.push(format!(
-                   "Done Caching for {}, with {} data",
-                   dpt,
-                   db_data.len()
-               ));
-           }
-       }
-       Ok(results)
-   }
-    */
+    fn ttl() -> i64 {
+        60 * 60 * 18 // Fresh for 1 hour
+    }
+}

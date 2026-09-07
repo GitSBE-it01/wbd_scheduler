@@ -22,9 +22,9 @@ pub struct PnDemand {
     pub item_id: String,
     pub old_id: String,
 }
-
-impl PnDemand {
-    pub async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
+use crate::system::db::DatabaseCacheable;
+impl DatabaseCacheable for PnDemand {
+    async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
         let pool = state.pool();
         let datas = sqlx::query_as::<_, Self>(
             r#"
@@ -52,5 +52,19 @@ impl PnDemand {
         .fetch_all(pool)
         .await?;
         Ok(datas)
+    }
+}
+
+use crate::system::cache::Cacheable;
+use std::time::Duration;
+impl Cacheable for PnDemand {
+    type Key = String;
+
+    fn namespace() -> &'static str {
+        "pn" // Saved to ./cache_dir/scans/<key>.json
+    }
+
+    fn ttl() -> i64 {
+        60 * 60 * 12 // Fresh for 1 hour
     }
 }
