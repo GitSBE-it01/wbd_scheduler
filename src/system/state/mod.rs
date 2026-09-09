@@ -52,7 +52,7 @@ impl AppState {
         sqlx::query("SELECT 1")
             .fetch_one(pool)
             .await
-            .map_err(|e| StateError::DatabaseHealthCheck(e))?;
+            .map_err(StateError::DatabaseHealthCheck)?;
         Ok(())
     }
 

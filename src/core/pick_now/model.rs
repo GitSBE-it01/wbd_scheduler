@@ -1,7 +1,14 @@
 use crate::system::db::{pn_demand::PnDemand, pn_dept_inv::PnInv};
 use rust_decimal::Decimal;
 use time::Date;
-
+pub struct PnSummary {
+    pub computed_item: usize,
+    pub items_inserted: usize,
+}
+pub enum PnOutcome {
+    Skipped { reason: String },
+    Completed(PnSummary),
+}
 #[derive(Debug, Clone)]
 pub enum Record {
     Demand(PnDemand),

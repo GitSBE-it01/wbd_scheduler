@@ -17,7 +17,6 @@ pub fn collect_new_records(
     records.extend(inventory.into_iter().map(Record::Inventory));
     records.sort_by(|a, b| (a.dept(), a.item(), a._date()).cmp(&(b.dept(), b.item(), b._date())));
     let mut collect_record: Vec<PnResult> = Vec::with_capacity(records.len());
-    let mut cek_new = 0;
     for record in records {
         let item = record.item().to_string();
         let dept = record.dept().to_string();

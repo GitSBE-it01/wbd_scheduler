@@ -1,38 +1,28 @@
-use crate::app::error::AppResult;
-use crate::system::state::AppState;
+use crate::app::error::AppError;
 use crate::core::drawing_catalog::{
-    flow::run_catalog,
     model::{SyncDirectoryCommand, SyncOutcome},
+    run_catalog,
 };
+use crate::system::state::AppState;
 use std::path::PathBuf;
 use std::time::Instant;
-use tracing::info;
+use tracing::{error, info, warn};
 
-pub async fn run(state: &AppState) -> AppResult<()> {
-    info!("====================Drawing====================");
-    let total_start = Instant::now();
+pub async fn handler(state: &AppState) -> Result<(), AppError> {
     let cmd = SyncDirectoryCommand {
         target_dir: PathBuf::from(r"\\192.168.2.219\General\Drawing\Release For Production\"),
     };
 
     match run_catalog(state, cmd).await {
         Ok(SyncOutcome::Skipped { reason }) => {
-            println!("Sync skipped: {}", reason);
-            // Or return HTTP 200: {"status": "skipped", "message": reason}
+            warn!("Sync skipped: {}", reason);
         }
         Ok(SyncOutcome::Completed(summary)) => {
-            println!("Sync finished! Inserted: {}", summary.items_inserted);
-            // Or return HTTP 201: {"status": "completed", "inserted": ...}
+            info!("Sync finished! Inserted: {}", summary.items_inserted);
         }
         Err(e) => {
-            eprintln!("Error during sync: {}", e);
-            // Or return HTTP 500
+            error!("Error during sync: {}", e);
         }
     }
-    let total_dur = total_start.elapsed();
-    info!(
-        duration = ?total_dur,
-        "====================END Drawing===================="
-    );
     Ok(())
 }

@@ -18,7 +18,7 @@ pub async fn parse_directory(dir_path: &PathBuf) -> Result<Vec<Catalog>, SyncErr
 
 pub fn collect_filenames_recursive(
     current_path: &Path,
-    relative_base: &Path,
+    _relative_base: &Path,
     catalog: &mut Vec<Catalog>,
 ) -> Result<(), SyncError> {
     for entry in fs::read_dir(current_path)? {
@@ -35,7 +35,7 @@ pub fn collect_filenames_recursive(
             if dir_name.contains("superseded") && dir_name.contains("adr") {
                 continue;
             }
-            collect_filenames_recursive(&entry_path, relative_base, catalog)?;
+            collect_filenames_recursive(&entry_path, _relative_base, catalog)?;
         } else if entry_path.is_file() {
             // 3. Calculated relative path safely
             catalog.push(Catalog {

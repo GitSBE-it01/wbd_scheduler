@@ -14,13 +14,6 @@ pub enum SyncOutcome {
 
 // intermediate
 #[derive(Debug, PartialEq, Serialize, Deserialize, FromRow)]
-pub struct ScannedItem {
-    pub item: String,
-    pub item_desc: Option<String>,
-    pub drawing_path: Option<PathBuf>,
-}
-// intermediate
-#[derive(Debug, PartialEq, Serialize, Deserialize, FromRow)]
 pub struct Catalog {
     pub file_path: PathBuf,
 }

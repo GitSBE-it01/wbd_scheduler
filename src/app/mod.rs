@@ -2,7 +2,7 @@ pub mod error;
 pub mod pick_now;
 use crate::system::{config::AppConfig, state::AppState};
 use serde::{Deserialize, Serialize};
-// pub mod drawing_catalog;
+pub mod drawing_catalog;
 // pub mod new_type_report;
 // use crate::system::config::AppConfig;
 // use crate::system::state::AppState;
@@ -16,7 +16,7 @@ pub async fn main_handler() -> Result<(), AppError> {
     let state = AppState::new(config).await?;
     info!("Running Drawing Catalog... ");
     let mut time_record = Instant::now();
-    // pick_now::handler(&state).await?;
+    drawing_catalog::handler(&state).await?;
     let mut elapsed = time_record.elapsed();
     info!(duration = ?elapsed, "Finished Drawing Catalog... ");
     info!("Running Pick Now... ");
@@ -27,7 +27,6 @@ pub async fn main_handler() -> Result<(), AppError> {
     info!("Finished Scheduler... ");
     Ok(())
 }
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WoBrowseRecord {
     pub item_number: String,
@@ -61,8 +60,8 @@ mod tests {
     use super::*;
     use crate::core::pick_now::model::Record;
     use crate::system::cache;
-    use crate::system::db::DatabaseCacheable;
     use crate::system::config::AppConfig;
+    use crate::system::db::DatabaseCacheable;
     use crate::system::db::{
         pn_demand::PnDemand, pn_dept_inv::PnInv, pn_past_id::PnPastID, pn_pic::PnPic,
         pn_result::PnResult, qad_item::QadItemMstr,

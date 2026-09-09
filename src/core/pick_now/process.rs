@@ -1,8 +1,9 @@
 use crate::core::pick_now::error::PnError;
-use crate::core::pick_now::model::Record;
+use crate::core::pick_now::model::{PnOutcome, PnSummary, Record};
 use crate::system::db::{pn_past_id::PnPastID, pn_result::PnResult};
 use rust_decimal::Decimal;
 use time::{OffsetDateTime, Weekday};
+
 pub fn pn_process(
     raw_record: Vec<PnResult>,
     past_result: Vec<PnPastID>,
@@ -37,20 +38,18 @@ pub fn pn_process(
                 .iter()
                 .any(|dtx| &dtx.wo_id == lot_id && dtx.id_new == "new")
         });
-        let exists: bool = if matches!(
+        let is_weekend_window = matches!(
             current_day,
             Weekday::Saturday | Weekday::Sunday | Weekday::Monday
-        ) {
-            if curr_id_exist_in_past {
-                if curr_id_is_new_in_past { true } else { false }
-            } else {
-                true
-            }
+        );
+
+        let exists = if is_weekend_window {
+            !curr_id_exist_in_past || curr_id_is_new_in_past
         } else {
-            if curr_id_exist_in_past { false } else { true }
+            !curr_id_exist_in_past
         };
         let new_val = if &record.remark == "2.demand" {
-            if exists == true {
+            if exists {
                 "new".to_string()
             } else {
                 String::new()
@@ -59,7 +58,7 @@ pub fn pn_process(
             String::new()
         };
         let val_acc = running_balance.min(Decimal::ZERO);
-        let pick: String = if val_acc < Decimal::ZERO {
+        let pick_val: String = if val_acc < Decimal::ZERO {
             "Pick".to_string()
         } else {
             String::new()
@@ -81,7 +80,7 @@ pub fn pn_process(
             due_dt: record.due_dt,
             wo_rmks: record.wo_rmks,
             pic: record.pic,
-            pick: pick,
+            pick: pick_val,
             id_new: new_val,
             item_id: record.item_id,
             _desc2: record._desc2,

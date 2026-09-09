@@ -8,10 +8,15 @@ use crate::system::state::error::StateError;
 pub struct AppClock {
     offset: UtcOffset,
 }
+impl Default for AppClock {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl AppClock {
     pub fn new() -> Self {
-        let offset = UtcOffset::current_local_offset().unwrap_or_else(|_| UtcOffset::UTC);
+        let offset = UtcOffset::current_local_offset().unwrap_or(UtcOffset::UTC);
         Self { offset }
     }
 
