@@ -5,7 +5,6 @@ use crate::core::drawing_catalog::{
 };
 use crate::system::state::AppState;
 use std::path::PathBuf;
-use std::time::Instant;
 use tracing::{error, info, warn};
 
 pub async fn handler(state: &AppState) -> Result<(), AppError> {

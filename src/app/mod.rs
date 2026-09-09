@@ -1,11 +1,10 @@
+pub mod ebom_parent;
 pub mod error;
 pub mod pick_now;
 use crate::system::{config::AppConfig, state::AppState};
 use serde::{Deserialize, Serialize};
 pub mod drawing_catalog;
 // pub mod new_type_report;
-// use crate::system::config::AppConfig;
-// use crate::system::state::AppState;
 pub use error::AppError;
 use std::time::Instant;
 use tracing::info;
@@ -24,9 +23,15 @@ pub async fn main_handler() -> Result<(), AppError> {
     pick_now::handler(&state).await?;
     elapsed = time_record.elapsed();
     info!(duration = ?elapsed, "Finished Pick Now... ");
+    info!("Running eBOM Parent... ");
+    time_record = Instant::now();
+    ebom_parent::handler(&state).await?;
+    elapsed = time_record.elapsed();
+    info!(duration = ?elapsed, "Finished eBOM Parent... ");
     info!("Finished Scheduler... ");
     Ok(())
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WoBrowseRecord {
     pub item_number: String,

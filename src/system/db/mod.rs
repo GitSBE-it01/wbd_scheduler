@@ -1,4 +1,5 @@
 pub mod dc_drawing;
+pub mod ebom_parent;
 pub mod error;
 pub mod pn_demand;
 pub mod pn_dept_inv;
