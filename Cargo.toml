@@ -3,9 +3,6 @@ name = "wbd_scheduler"
 version = "0.1.0"
 edition = "2024"
 
-[lints.rust]
-non_snake_case = "allow"
-
 [dependencies]
 csv = "1.4.0"
 # -- Environment and Configuration
@@ -46,3 +43,5 @@ tracing-subscriber = { version = "0.3.23", features = [
     "fmt",
     "time",
 ] }
+encoding_rs = "0.8.35"
+encoding_rs_io = "0.1.8"

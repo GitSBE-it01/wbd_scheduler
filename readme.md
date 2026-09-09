@@ -32,3 +32,6 @@ utk running di directory tests utk running testing yg di buat di situ
 `cargo test --test nama_file`
 
 ##
+
+for running unit test
+cargo test function_name --lib -- --nocapture
