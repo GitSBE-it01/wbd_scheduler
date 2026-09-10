@@ -12,7 +12,6 @@ pub fn compile(
 ) -> Result<Vec<DcDrawing>, SyncError> {
     let mut compile_scans: Vec<DcDrawing> = Vec::with_capacity(scanned_items.len());
     for item in items {
-        // 1. Normalize target part: trim whitespace and convert to lowercase
         if item.pt_status.as_deref() == Some("OBSOLETE") {
             continue;
         }
@@ -37,5 +36,6 @@ pub fn compile(
             drawing_path: pth,
         });
     }
+    info!(compile = ?compile_scans.len(), "finish compiling drawing catalog");
     Ok(compile_scans)
 }

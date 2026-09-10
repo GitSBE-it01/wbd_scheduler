@@ -32,6 +32,7 @@ pub async fn run_catalog(
     info!(count= ?del, "Deleting pn_drawing data");
     let scanned_items = parse_directory(&cmd.target_dir).await?;
     let itm_count = scanned_items.len();
+    info!(scan_item= ?itm_count, "finish scan drawing dir");
     let items = store
         .db_handler::<QadItemMstr>(state, "items".to_string())
         .await?;
@@ -42,8 +43,8 @@ pub async fn run_catalog(
         } else {
             compile(scanned_items, items.data)?
         };
-
-    let itm_inserted = if result.is_empty() {
+    info!(rslt_count=?result.len(), "starting inserting result data");
+    let itm_inserted = if !result.is_empty() {
         let cnt = DcDrawing::insert(state, &result).await?;
         wbd_store.db_handler::<DcDrawing>(state, filename).await?;
         cnt.try_into().unwrap()

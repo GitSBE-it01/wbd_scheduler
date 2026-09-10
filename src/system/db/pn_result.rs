@@ -211,7 +211,7 @@ impl Cacheable for PnResult {
     type Key = String;
 
     fn namespace() -> &'static str {
-        "pick_now" // Saved to ./cache_dir/scans/<key>.json
+        "pick_now_2" // Saved to ./cache_dir/scans/<key>.json
     }
 
     fn ttl() -> i64 {

@@ -41,8 +41,12 @@ impl DatabaseCacheable for PnInv {
                 JOIN dbqad_live.loc_mstr inv_b  
                     ON inv_a.ld_loc = inv_b.loc_loc
                 WHERE inv_a.ld_status NOT IN ('AVALAN', 'WKNDA', 'UNCOUNT', 'TRANSIT', 'CONSIGN', 'SCRAP', 'REJECT', 'SAMPLE')  
-                GROUP BY inv_a.ld_part, inv_b.loc_loc
-                ORDER BY inv_a.ld_part ASC, inv_b.loc_department
+                GROUP BY 
+                    item, 
+                    dept        
+                ORDER BY 
+                    item ASC, 
+                    dept ASC
             "#,
             )
             .fetch_all(pool)
