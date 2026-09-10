@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::fs;
 use std::path::{Path, PathBuf};
 use time::{Duration, OffsetDateTime};
+use tracing::info;
 pub trait Cacheable: Serialize + DeserializeOwned {
     type Key: std::fmt::Display;
     fn namespace() -> &'static str;
@@ -95,7 +96,9 @@ impl CacheEngine {
             data,
         };
         let json = serde_json::to_string_pretty(&envelope)?;
+        let cnt = json.len();
         fs::write(path, json)?;
+        info!(data=?cnt, key= T::namespace(), "New Cache Done");
         Ok(envelope)
     }
 
@@ -103,6 +106,7 @@ impl CacheEngine {
     pub fn delete<T: Cacheable>(&self, key: &T::Key) -> Result<(), CacheError> {
         let path = self.resolve_path::<T>(key);
         if path.exists() {
+            info!(ChacheKey = %key, "Cache Invalid");
             fs::remove_file(path)?;
         }
         Ok(())
