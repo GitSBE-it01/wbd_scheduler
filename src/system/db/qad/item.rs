@@ -145,7 +145,7 @@ mod tests {
     use crate::system::cache;
     use crate::system::cache::error::CacheError;
     use crate::system::config::AppConfig;
-    use crate::system::db::qad_item::QadItemMstr;
+    use crate::system::db::QadItemMstr;
     use crate::system::io::csv::{load_csv_data, save_as_csv};
     #[tokio::test]
     async fn test_cache_item() -> Result<(), AppError> {

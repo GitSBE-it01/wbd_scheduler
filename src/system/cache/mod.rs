@@ -91,14 +91,14 @@ impl CacheEngine {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
+        let cnt = data.len();
         let envelope = CacheResult {
             expires_at: state.clock.timestamp(),
             data,
         };
         let json = serde_json::to_string_pretty(&envelope)?;
-        let cnt = json.len();
         fs::write(path, json)?;
-        info!(data=?cnt, key= T::namespace(), "New Cache Done");
+        info!(data=?cnt, key= %key, "New Cache Done");
         Ok(envelope)
     }
 

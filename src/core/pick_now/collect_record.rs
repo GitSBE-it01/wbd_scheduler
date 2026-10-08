@@ -1,9 +1,6 @@
 use crate::core::pick_now::error::PnError;
 use crate::core::pick_now::model::Record;
-use crate::system::db::{
-    pn_demand::PnDemand, pn_dept_inv::PnInv, pn_pic::PnPic, pn_result::PnResult,
-    qad_item::QadItemMstr,
-};
+use crate::system::db::{PnDemand, PnInv, PnPic, PnResult, QadItemMstr};
 use rust_decimal::Decimal;
 
 pub fn collect_new_records(

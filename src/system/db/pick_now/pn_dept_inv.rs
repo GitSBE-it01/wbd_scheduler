@@ -40,7 +40,7 @@ impl DatabaseCacheable for PnInv {
                 FROM dbqad_live.ld_det inv_a 
                 JOIN dbqad_live.loc_mstr inv_b  
                     ON inv_a.ld_loc = inv_b.loc_loc
-                WHERE inv_a.ld_status NOT IN ('AVALAN', 'WKNDA', 'UNCOUNT', 'TRANSIT', 'CONSIGN', 'SCRAP', 'REJECT', 'SAMPLE')  
+                WHERE inv_a.ld_status NOT IN ('AVALAN', 'WKNDA', 'UNCOUNT', 'TRANSIT', 'CONSIGN', 'SCRAP', 'REJECT', 'SAMPLE', 'BURNT')  
                 GROUP BY 
                     item, 
                     dept        

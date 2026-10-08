@@ -1,7 +1,7 @@
 use crate::core::pick_now::error::PnError;
 use crate::system::cache;
 use crate::system::cache::error::CacheError;
-use crate::system::db::pn_result::PnResult;
+use crate::system::db::PnResult;
 use crate::system::state::AppState;
 use std::path::Path;
 use tracing::info;

@@ -215,6 +215,6 @@ impl Cacheable for PnResult {
     }
 
     fn ttl() -> i64 {
-        60 * 60 * 18 // Fresh for 1 hour
+        60 * 60 * 15 // Fresh for 1 hour
     }
 }

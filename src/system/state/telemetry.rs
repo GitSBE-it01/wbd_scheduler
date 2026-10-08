@@ -15,11 +15,12 @@ pub fn init_telemetry(log_dir: &str, file_name: &str) -> WorkerGuard {
         UtcOffset::current_local_offset().unwrap_or(UtcOffset::UTC),
         format,
     );
-    let console_layer = fmt::layer().compact().with_timer(timer.clone()); // or .pretty(), .json()
+    let console_layer = fmt::layer().pretty().with_timer(timer.clone()); // or .pretty(), .json()
     let file_layer = fmt::layer()
-        .compact()
+        .json()
         .with_ansi(false)
         .with_timer(timer)
+        .flatten_event(true)
         .with_writer(non_blocking_appender);
     let env_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,wbd_scheduler=debug"));

@@ -1,4 +1,4 @@
-use crate::system::db::{pn_demand::PnDemand, pn_dept_inv::PnInv};
+use crate::system::db::{PnDemand, PnInv};
 use rust_decimal::Decimal;
 use time::Date;
 pub struct PnSummary {

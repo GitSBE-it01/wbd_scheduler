@@ -1,7 +1,7 @@
 use crate::core::drawing_catalog::error::SyncError;
 use crate::core::drawing_catalog::model::Catalog;
 use crate::system::cache;
-use crate::system::db::{dc_drawing::DcDrawing, qad_item::QadItemMstr};
+use crate::system::db::{DcDrawing, QadItemMstr};
 use crate::system::state::AppState;
 use std::path::Path;
 use tracing::info;

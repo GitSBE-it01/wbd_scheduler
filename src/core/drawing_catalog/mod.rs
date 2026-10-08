@@ -2,8 +2,7 @@ pub mod error;
 pub mod model;
 pub mod process;
 pub mod scan_dir;
-use crate::system::db::dc_drawing::DcDrawing;
-use crate::system::db::qad_item::QadItemMstr;
+use crate::system::db::{DcDrawing, QadItemMstr};
 use crate::system::state::AppState;
 use crate::system::{cache, db::DatabaseCacheable};
 use error::SyncError;
@@ -29,7 +28,8 @@ pub async fn run_catalog(
         });
     }
     let del = DcDrawing::delete(state).await?;
-    info!(count= ?del, "Deleting pn_drawing data");
+    info!(count= ?del, "pn_drawing data Deleted");
+    info!("starting parse dir...");
     let scanned_items = parse_directory(&cmd.target_dir).await?;
     let itm_count = scanned_items.len();
     info!(scan_item= ?itm_count, "finish scan drawing dir");
@@ -37,6 +37,7 @@ pub async fn run_catalog(
         .db_handler::<QadItemMstr>(state, "items".to_string())
         .await?;
 
+    info!("starting compile data...");
     let result: Vec<DcDrawing> =
         if let Some(cached_data) = wbd_store.get::<DcDrawing>(state, &filename) {
             cached_data.data

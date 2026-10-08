@@ -4,10 +4,7 @@ pub mod model;
 pub mod pn_cache;
 pub mod process;
 use crate::system::cache;
-use crate::system::db::{
-    pn_demand::PnDemand, pn_dept_inv::PnInv, pn_past_id::PnPastID, pn_pic::PnPic,
-    pn_result::PnResult, qad_item::QadItemMstr,
-};
+use crate::system::db::{PnDemand, PnInv, PnPastID, PnPic, PnResult, QadItemMstr};
 use crate::system::state::AppState;
 use collect_record::collect_new_records;
 use error::PnError;
@@ -25,6 +22,7 @@ pub async fn run_pick_now(state: &AppState) -> Result<PnOutcome, PnError> {
         store.db_handler::<QadItemMstr>(state, "items".to_string()),
     )?;
     if PnResult::check_curr_data(state).await? {
+        PnCache(state).await?;
         return Ok(PnOutcome::Skipped {
             reason: "Pick Now already run".to_string(),
         });

@@ -1,6 +1,6 @@
 use crate::core::pick_now::error::PnError;
 use crate::core::pick_now::model::{PnOutcome, PnSummary, Record};
-use crate::system::db::{pn_past_id::PnPastID, pn_result::PnResult};
+use crate::system::db::{PnPastID, PnResult};
 use rust_decimal::Decimal;
 use time::{OffsetDateTime, Weekday};
 

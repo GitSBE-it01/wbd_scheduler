@@ -4,7 +4,7 @@ pub mod pick_now;
 use crate::system::{config::AppConfig, state::AppState};
 use serde::{Deserialize, Serialize};
 pub mod drawing_catalog;
-// pub mod new_type_report;
+pub mod new_type_report;
 pub use error::AppError;
 use std::time::Instant;
 use tracing::info;
@@ -23,6 +23,11 @@ pub async fn main_handler() -> Result<(), AppError> {
     pick_now::handler(&state).await?;
     elapsed = time_record.elapsed();
     info!(duration = ?elapsed, "Finished Pick Now... ");
+    info!("Running New Type Report... ");
+    time_record = Instant::now();
+    new_type_report::run_ntr(&state).await?;
+    elapsed = time_record.elapsed();
+    info!(duration = ?elapsed, "Finished New Type Report... ");
     info!("Running eBOM Parent... ");
     time_record = Instant::now();
     ebom_parent::handler(&state).await?;
@@ -67,10 +72,7 @@ mod tests {
     use crate::system::cache;
     use crate::system::config::AppConfig;
     use crate::system::db::DatabaseCacheable;
-    use crate::system::db::{
-        pn_demand::PnDemand, pn_dept_inv::PnInv, pn_past_id::PnPastID, pn_pic::PnPic,
-        pn_result::PnResult, qad_item::QadItemMstr,
-    };
+    use crate::system::db::{PnDemand, PnInv, PnPastID, PnPic, PnResult, QadItemMstr};
     use crate::system::io::csv::{load_csv_data, save_as_csv};
     use crate::system::state::AppState;
     use error::AppError;
