@@ -1,13 +1,13 @@
 use crate::{
-    system::state::AppState,
     core::new_type_report::{
         error::NtrError,
         model::{NtrHead, NtrSummary, RawNtrHead},
         sync_to_db::{fetch_data, insert_into_database},
     },
+    system::state::AppState,
 };
 use tracing::info;
-pub async fn run(state: &AppState) -> Result<NtrSummary, NtrError> {
+pub async fn ntr_handler(state: &AppState) -> Result<NtrSummary, NtrError> {
     info!("->> Running NTR Sched");
     let records: Vec<RawNtrHead> = fetch_data(state).await?;
     let mut process_result: Vec<NtrHead> = Vec::with_capacity(records.len());

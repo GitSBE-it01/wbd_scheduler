@@ -5,86 +5,53 @@ use sqlx::{FromRow, MySql, QueryBuilder};
 use time;
 use time::Date;
 time::serde::format_description!(date_format, Date, "[year]-[month]-[day]");
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ItemDevStatus {
-    Open,
-    Close,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum CostStatus {
-    Ok,
-    SBE4,
-    Purchasing,
-    NoCost,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DrawingStatus {
-    Ok(String),
-    NoNeedDrawing,
-    NoData,
-}
-
+use crate::system::cache::Cacheable;
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct ItemDevMaster {
+pub struct DBItemDevMstr {
+    pub id: i32,
     pub item: String,
     pub bom: bool,
     pub routing: bool,
-    pub cost: CostStatus,
-    pub drawing: DrawingStatus,
-    pub status: ItemDevStatus,
+    pub cost: String,
+    pub status: String,
+    pub no_srf: i32,
+    pub no_sample: i32,
 }
 
-impl ItemDevMaster {
-    pub async fn insert(state: &AppState, records: &[Self]) -> Result<u64, DbError> {
-        if records.is_empty() {
-            return Err(DbError::NoRecordInsert);
-        }
+use crate::system::db::DatabaseCacheable;
+impl DatabaseCacheable for DBItemDevMstr {
+    async fn fetch_db(state: &AppState) -> Result<Vec<Self>, DbError> {
         let pool = state.pool();
-        let mut total_rows_affected = 0;
-        for chunk in records.chunks(1000) {
-            let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
-                "INSERT INTO dbpick_now.item_dev_master(id, item, bom, routing, cost, drawing, status, added)",
-            );
-            query_builder.push_values(chunk, |mut b, rec| {
-                let cost: &str = match &rec.cost {
-                    CostStatus::Ok => "Ok",
-                    CostStatus::SBE4 => "Belum ada harga dari SBE4",
-                    CostStatus::Purchasing => "Belum ada harga dari PROCUREMENT",
-                    _ => "-",
-                };
-                let drawing: &str = match &rec.drawing {
-                    DrawingStatus::Ok(message) => message,
-                    DrawingStatus::NoNeedDrawing => "No Need Drawing",
-                    _ => "No Drawing",
-                };
-                let status = match &rec.status {
-                    ItemDevStatus::Open => "Open",
-                    _ => "Close",
-                };
-                b.push_bind(&rec.item)
-                    .push_bind(&rec.bom)
-                    .push_bind(&rec.routing)
-                    .push_bind(cost)
-                    .push_bind(drawing)
-                    .push_bind(status)
-                    .push_bind(state.clock.today());
-            });
-
-            let result = query_builder.build().execute(pool).await?;
-            total_rows_affected += result.rows_affected();
-        }
-        Ok(total_rows_affected)
+        let datas = sqlx::query_as::<_, Self>(
+            r#"
+                SELECT 
+                    id,
+                    item, 
+                    bom, 
+                    routing, 
+                    cost, 
+                    status, 
+                    no_srf, 
+                    no_sample,
+                    added,
+                    close_date,
+                    mdf_date
+                FROM db_wbd.item_dev_master
+                WHERE status = 'open'
+                ORDER BY item
+            "#,
+        )
+        .fetch_all(pool)
+        .await?;
+        Ok(datas)
     }
 }
 
-use crate::system::cache::Cacheable;
-impl Cacheable for ItemDevMaster {
+impl Cacheable for DBItemDevMstr {
     type Key = String;
 
     fn namespace() -> &'static str {
-        "pick_now"
+        "item_dev"
     }
 
     fn ttl() -> i64 {

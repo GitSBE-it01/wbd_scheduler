@@ -12,7 +12,7 @@ use model::{PnOutcome, PnSummary};
 use pn_cache::PnCache;
 use process::pn_process;
 
-pub async fn run_pick_now(state: &AppState) -> Result<PnOutcome, PnError> {
+pub async fn pn_handler(state: &AppState) -> Result<PnOutcome, PnError> {
     let store = cache::CacheEngine::new("./cache");
     let (past_result, pic, dmd, inv, pt_mstr) = tokio::try_join!(
         store.db_handler::<PnPastID>(state, "pn_past_id".to_string()),

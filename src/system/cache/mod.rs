@@ -46,10 +46,13 @@ impl CacheEngine {
         T: DatabaseCacheable + Clone,
     {
         if let Some(cached_data) = self.get::<T>(state, &key) {
+            info!(data=?cached_data.data.len(), key= %key, "Cache Available");
             return Ok(cached_data);
         }
+        info!(key= %key,"Cache Miss, Processing New Cache...");
         let fresh_data: Vec<T> = T::fetch_db(state).await?;
         let result = self.put::<T>(state, &key, fresh_data)?;
+        info!(data=?&result.data.len(),"Done Caching...");
         Ok(result)
     }
 

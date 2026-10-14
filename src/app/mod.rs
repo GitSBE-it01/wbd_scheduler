@@ -4,6 +4,7 @@ pub mod pick_now;
 use crate::system::{config::AppConfig, state::AppState};
 use serde::{Deserialize, Serialize};
 pub mod drawing_catalog;
+pub mod item_dev;
 pub mod new_type_report;
 pub use error::AppError;
 use std::time::Instant;
@@ -14,13 +15,14 @@ pub async fn main_handler() -> Result<(), AppError> {
     let config = AppConfig::new(".env")?;
     let state = AppState::new(config).await?;
     info!("Running Drawing Catalog... ");
+    let starts = Instant::now();
     let mut time_record = Instant::now();
-    drawing_catalog::handler(&state).await?;
+    drawing_catalog::run_drawing_catalog(&state).await?;
     let mut elapsed = time_record.elapsed();
     info!(duration = ?elapsed, "Finished Drawing Catalog... ");
     info!("Running Pick Now... ");
     time_record = Instant::now();
-    pick_now::handler(&state).await?;
+    pick_now::run_pick_now(&state).await?;
     elapsed = time_record.elapsed();
     info!(duration = ?elapsed, "Finished Pick Now... ");
     info!("Running New Type Report... ");
@@ -28,12 +30,18 @@ pub async fn main_handler() -> Result<(), AppError> {
     new_type_report::run_ntr(&state).await?;
     elapsed = time_record.elapsed();
     info!(duration = ?elapsed, "Finished New Type Report... ");
+    info!("Running Item Dev Scheduler... ");
+    time_record = Instant::now();
+    item_dev::run_item_dev(&state).await?;
+    elapsed = time_record.elapsed();
+    info!(duration = ?elapsed, "Finished Item Dev Scheduler... ");
     info!("Running eBOM Parent... ");
     time_record = Instant::now();
-    ebom_parent::handler(&state).await?;
+    ebom_parent::run_ebom(&state).await?;
     elapsed = time_record.elapsed();
     info!(duration = ?elapsed, "Finished eBOM Parent... ");
-    info!("Finished Scheduler... ");
+    let total_elapsed = starts.elapsed();
+    info!(total_duration = ?total_elapsed,"Finished Scheduler... ");
     Ok(())
 }
 

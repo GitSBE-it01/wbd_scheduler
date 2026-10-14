@@ -8,7 +8,7 @@ use error::EBomError;
 use model::{EBomJoin, EBomOutcome, EBomPrJoin, EBomResult, EBomSummary};
 use process::*;
 
-pub async fn run_ebom(state: &AppState) -> Result<EBomOutcome, EBomError> {
+pub async fn ebom_handler(state: &AppState) -> Result<EBomOutcome, EBomError> {
     let store = cache::CacheEngine::new("//192.168.2.103/xampp/htdocs/wbd/_cache/");
     let cached = (
         store.get::<EBomJoin>(state, &"join_all".to_string()),

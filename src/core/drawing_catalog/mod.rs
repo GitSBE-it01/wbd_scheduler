@@ -12,7 +12,7 @@ use scan_dir::parse_directory;
 use std::path::Path;
 use tracing::info;
 
-pub async fn run_catalog(
+pub async fn dc_handler(
     state: &AppState,
     cmd: SyncDirectoryCommand,
 ) -> Result<SyncOutcome, SyncError> {
