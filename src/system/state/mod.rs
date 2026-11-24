@@ -7,7 +7,7 @@ use error::StateError;
 use sqlx::ConnectOptions;
 use sqlx::{
     MySqlPool,
-    mysql::{MySqlConnectOptions, MySqlPoolOptions},
+    mysql::{MySqlConnectOptions, MySqlConnection, MySqlPoolOptions},
 };
 use std::time::Duration;
 use tracing::info;
@@ -34,12 +34,11 @@ impl AppState {
 
     async fn build_pool(config: &AppConfig) -> Result<MySqlPool, StateError> {
         let mut connect_options: MySqlConnectOptions = config.db_url_std.parse()?;
-
         // OPTION A: Increase threshold to 10 seconds (change Duration as needed)
         connect_options =
             connect_options.log_slow_statements(LevelFilter::Warn, Duration::from_secs(60));
         let pool = MySqlPoolOptions::new()
-            .max_connections(3)
+            .max_connections(10)
             .acquire_timeout(Duration::from_secs(5))
             .idle_timeout(Duration::from_secs(60))
             .connect_with(connect_options)

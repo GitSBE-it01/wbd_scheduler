@@ -1,29 +1,24 @@
-// use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::path::PathBuf;
 
-pub struct NtrSummary {
-    pub nt_hd_found: usize,
-    pub nt_hd_inserted: usize,
+// The ultimate Output on success
+pub struct SyncSummary {
+    pub items_found: usize,
+    pub items_inserted: usize,
 }
-pub enum NtrResult {
+pub enum SyncOutcome {
     Skipped { reason: String },
-    Completed(NtrSummary),
+    Completed(SyncSummary),
 }
 
-// input and output
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
-pub struct NtrHead {
-    pub item: String,
-    pub wo_id: String,
-    pub comp: String,
-    pub msr_type: String,
-    pub ppr_type: String,
-}
-
+// intermediate
 #[derive(Debug, PartialEq, Serialize, Deserialize, FromRow)]
-pub struct RawNtrHead {
-    pub item: String,
-    pub wo_id: String,
-    pub comp: String,
+pub struct Catalog {
+    pub file_path: PathBuf,
+}
+
+// input
+pub struct SyncDirectoryCommand {
+    pub target_dir: PathBuf,
 }

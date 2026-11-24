@@ -33,7 +33,7 @@ pub async fn dc_handler(
     let scanned_items = parse_directory(&cmd.target_dir).await?;
     let itm_count = scanned_items.len();
     info!(scan_item= ?itm_count, "finish scan drawing dir");
-    let items = store
+    let items: cache::CacheResult<QadItemMstr> = store
         .db_handler::<QadItemMstr>(state, "items".to_string())
         .await?;
 

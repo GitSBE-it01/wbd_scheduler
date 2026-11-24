@@ -1,4 +1,5 @@
 pub mod dc_drawing;
+pub mod jig;
 pub use dc_drawing::DcDrawing;
 pub mod ebom_parent;
 pub use ebom_parent::EBomParent;
